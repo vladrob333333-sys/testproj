@@ -340,14 +340,14 @@ def init_db():
             
             # Пример блюд
             menu_items = [
-                MenuItem(name='Брускетта', description='С помидорами и базиликом', price=350, category_id=1, image='bruschetta.jpg'),
-                MenuItem(name='Стейк', description='Говяжий стейк с овощами', price=1200, category_id=2, image='steak.jpg'),
-                MenuItem(name='Салат Цезарь', description='С курицей и соусом', price=450, category_id=1, image='caesar.jpg'),
-                MenuItem(name='Кофе', description='Арабика 200мл', price=200, category_id=3, image='coffee.jpg'),
-                MenuItem(name='Тирамису', description='Итальянский десерт', price=400, category_id=4, image='tiramisu.jpg'),
-                MenuItem(name='Суп Том Ям', description='Тайский острый суп с креветками', price=550, category_id=2, image='tomyam.jpg'),
-                MenuItem(name='Паста Карбонара', description='С беконом и сливочным соусом', price=480, category_id=2, image='carbonara.jpg'),
-                MenuItem(name='Чизкейк', description='Классический чизкейк', price=350, category_id=4, image='cheesecake.jpg')
+                MenuItem(name='Брускетта', description='С помидорами и базиликом', price=35, category_id=1, image='bruschetta.jpg'),
+                MenuItem(name='Стейк', description='Говяжий стейк с овощами', price=120, category_id=2, image='steak.jpg'),
+                MenuItem(name='Салат Цезарь', description='С курицей и соусом', price=45, category_id=1, image='caesar.jpg'),
+                MenuItem(name='Кофе', description='Арабика 200мл', price=20, category_id=3, image='coffee.jpg'),
+                MenuItem(name='Тирамису', description='Итальянский десерт', price=40, category_id=4, image='tiramisu.jpg'),
+                MenuItem(name='Суп Том Ям', description='Тайский острый суп с креветками', price=55, category_id=2, image='tomyam.jpg'),
+                MenuItem(name='Паста Карбонара', description='С беконом и сливочным соусом', price=48, category_id=2, image='carbonara.jpg'),
+                MenuItem(name='Чизкейк', description='Классический чизкейк', price=35, category_id=4, image='cheesecake.jpg')
             ]
             
             for item in menu_items:
