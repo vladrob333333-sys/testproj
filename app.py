@@ -7,6 +7,130 @@ import os
 from models import *
 from database import db
 
+import json
+from sqlalchemy import desc
+
+# API для получения обновленных данных меню
+@app.route('/api/menu/update')
+def api_menu_update():
+    categories = Category.query.all()
+    menu_items = MenuItem.query.filter_by(is_available=True).all()
+    
+    result = []
+    for category in categories:
+        category_data = {
+            'id': category.id,
+            'name': category.name,
+            'items': []
+        }
+        
+        for item in menu_items:
+            if item.category_id == category.id:
+                category_data['items'].append({
+                    'id': item.id,
+                    'name': item.name,
+                    'description': item.description,
+                    'price': item.price,
+                    'image': item.image,
+                    'is_available': item.is_available
+                })
+        
+        if category_data['items']:
+            result.append(category_data)
+    
+    return jsonify(result)
+
+# API для получения обновленных заказов пользователя
+@app.route('/api/user/orders/update')
+@login_required
+def api_user_orders_update():
+    orders = Order.query.filter_by(user_id=current_user.id)\
+                       .order_by(desc(Order.created_at))\
+                       .limit(20)\
+                       .all()
+    
+    result = []
+    for order in orders:
+        order_data = {
+            'id': order.id,
+            'total_amount': order.total_amount,
+            'status': order.status,
+            'created_at': order.created_at.strftime('%d.%m.%Y %H:%M'),
+            'delivery_address': order.delivery_address,
+            'phone': order.phone,
+            'items_count': len(order.items),
+            'items': []
+        }
+        
+        for item in order.items[:5]:  # Берем только первые 5 позиций
+            order_data['items'].append({
+                'name': item.menu_item.name,
+                'quantity': item.quantity,
+                'price': item.price_at_time
+            })
+        
+        result.append(order_data)
+    
+    return jsonify(result)
+
+# API для администратора - получение обновленных заказов
+@app.route('/api/admin/orders/update')
+@login_required
+def api_admin_orders_update():
+    if current_user.role != 'admin':
+        abort(403)
+    
+    # Получение параметров фильтрации
+    status_filter = request.args.get('status', 'all')
+    date_filter = request.args.get('date', None)
+    
+    query = Order.query
+    
+    if status_filter != 'all':
+        query = query.filter_by(status=status_filter)
+    
+    if date_filter:
+        try:
+            filter_date = datetime.strptime(date_filter, '%Y-%m-%d')
+            query = query.filter(db.func.date(Order.created_at) == filter_date.date())
+        except ValueError:
+            pass
+    
+    orders = query.order_by(desc(Order.created_at)).limit(50).all()
+    
+    result = []
+    for order in orders:
+        result.append({
+            'id': order.id,
+            'username': order.user.username,
+            'total_amount': order.total_amount,
+            'status': order.status,
+            'created_at': order.created_at.strftime('%d.%m.%Y %H:%M'),
+            'delivery_address': order.delivery_address[:50] + '...' if order.delivery_address and len(order.delivery_address) > 50 else order.delivery_address,
+            'phone': order.phone
+        })
+    
+    return jsonify(result)
+
+# API для получения статистики (для администратора)
+@app.route('/api/admin/stats')
+@login_required
+def api_admin_stats():
+    if current_user.role != 'admin':
+        abort(403)
+    
+    total_orders = Order.query.count()
+    pending_orders = Order.query.filter_by(status='pending').count()
+    today_orders = Order.query.filter(db.func.date(Order.created_at) == datetime.today().date()).count()
+    total_revenue = db.session.query(db.func.sum(Order.total_amount)).scalar() or 0
+    
+    return jsonify({
+        'total_orders': total_orders,
+        'pending_orders': pending_orders,
+        'today_orders': today_orders,
+        'total_revenue': float(total_revenue)
+    })
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'restaurant-management-secret-key-2024'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///restaurant.db'
