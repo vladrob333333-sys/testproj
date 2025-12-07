@@ -664,3 +664,13 @@ tr:hover {
     background-color: var(--danger);
     color: var(--white);
 }
+
+.price::after,
+.item-price::after,
+.dish-price::after,
+.item-total::after,
+.total-amount::after,
+#cart-total::after {
+    content: " BYN";
+    font-weight: bold;
+}
