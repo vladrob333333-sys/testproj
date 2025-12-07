@@ -478,3 +478,47 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 {% endif %}
 
+// В конце файла script.js добавьте глобальную функцию для корзины
+window.addToCartGlobal = function(itemId, itemName, itemPrice, itemImage) {
+    // Логика добавления в корзину
+    let cart = JSON.parse(localStorage.getItem('restaurant_cart')) || [];
+    
+    const existingItem = cart.find(item => item.id === itemId);
+    
+    if (existingItem) {
+        existingItem.quantity += 1;
+    } else {
+        cart.push({
+            id: itemId,
+            name: itemName,
+            price: itemPrice,
+            image: itemImage,
+            quantity: 1
+        });
+    }
+    
+    localStorage.setItem('restaurant_cart', JSON.stringify(cart));
+    
+    // Обновляем счетчик корзины
+    updateCartCount();
+    
+    // Показываем уведомление
+    if (window.showNotification) {
+        window.showNotification('Товар добавлен в корзину!', 'success');
+    }
+};
+
+// Функция обновления счетчика корзины
+function updateCartCount() {
+    const cart = JSON.parse(localStorage.getItem('restaurant_cart')) || [];
+    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    
+    // Обновляем счетчик в навигации, если есть
+    const countElement = document.getElementById('cart-count');
+    if (countElement) {
+        countElement.textContent = totalItems;
+    }
+}
+
+// Вызываем обновление счетчика при загрузке
+document.addEventListener('DOMContentLoaded', updateCartCount);
