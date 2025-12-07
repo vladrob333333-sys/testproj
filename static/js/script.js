@@ -363,3 +363,118 @@ window.processOrder = async function() {
 
 // Инициализация при загрузке страницы
 updateCartCount();
+
+// Добавить в конец файла после существующего кода
+
+// Функция для проверки обновлений через WebSocket (если поддерживается)
+function initWebSocket() {
+    if ("WebSocket" in window) {
+        try {
+            // Создаем WebSocket соединение
+            const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+            
+            const socket = new WebSocket(wsUrl);
+            
+            socket.onopen = function() {
+                console.log("WebSocket соединение установлено");
+            };
+            
+            socket.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+            
+            socket.onclose = function() {
+                console.log("WebSocket соединение закрыто. Пытаемся переподключиться...");
+                // Пытаемся переподключиться через 5 секунд
+                setTimeout(initWebSocket, 5000);
+            };
+            
+            socket.onerror = function(error) {
+                console.error("WebSocket ошибка:", error);
+            };
+            
+            // Сохраняем сокет в глобальной переменной
+            window.wsConnection = socket;
+            
+        } catch (error) {
+            console.error("Ошибка при создании WebSocket:", error);
+        }
+    } else {
+        console.log("Ваш браузер не поддерживает WebSocket. Используется polling.");
+    }
+}
+
+// Обработка сообщений от WebSocket
+function handleWebSocketMessage(data) {
+    switch (data.type) {
+        case 'order_updated':
+            if (currentUserIsAdmin()) {
+                showNotification(`Заказ #${data.order_id} обновлен`, 'info');
+                refreshAdminData && refreshAdminData();
+            }
+            break;
+            
+        case 'new_order':
+            if (currentUserIsAdmin()) {
+                showNotification(`Новый заказ #${data.order_id}`, 'success');
+                refreshAdminData && refreshAdminData();
+            }
+            break;
+            
+        case 'order_status_changed':
+            if (currentUserIsCustomer() && data.user_id === getCurrentUserId()) {
+                showNotification(`Статус вашего заказа #${data.order_id} изменен`, 'info');
+                refreshUserOrders && refreshUserOrders();
+            }
+            break;
+    }
+}
+
+// Вспомогательные функции для проверки ролей
+function currentUserIsAdmin() {
+    // Проверяем, находится ли пользователь на странице администратора
+    return window.location.pathname.includes('/admin/') || 
+           document.querySelector('[href="/admin/orders"]');
+}
+
+function currentUserIsCustomer() {
+    return !currentUserIsAdmin();
+}
+
+function getCurrentUserId() {
+    // Здесь можно получить ID текущего пользователя из мета-тега или переменной
+    const userIdElement = document.querySelector('[data-user-id]');
+    return userIdElement ? userIdElement.getAttribute('data-user-id') : null;
+}
+
+// Инициализация WebSocket при загрузке страницы
+document.addEventListener('DOMContentLoaded', function() {
+    // Запускаем WebSocket только если пользователь авторизован
+    if (isAuthenticated) {
+        initWebSocket();
+    }
+    
+    // Добавляем мета-тег с ID пользователя (если авторизован)
+    if (isAuthenticated) {
+        const meta = document.createElement('meta');
+        meta.name = 'user-id';
+        meta.content = '{{ current_user.id if current_user else "" }}';
+        document.head.appendChild(meta);
+    }
+});
+
+// Добавить в base.html для передачи данных пользователя
+{% if current_user.is_authenticated %}
+<script>
+    window.currentUserId = {{ current_user.id }};
+    window.currentUserRole = '{{ current_user.role }}';
+    window.isAuthenticated = true;
+</script>
+{% else %}
+<script>
+    window.isAuthenticated = false;
+</script>
+{% endif %}
+
