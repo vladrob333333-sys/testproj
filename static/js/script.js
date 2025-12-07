@@ -325,7 +325,7 @@ window.processOrder = async function() {
     }
     
     // Проверка формата телефона
-    const phoneRegex = /^[\+]\d{1,3}\s?\(?\d{1,4}\)?[\s.-]?\d{1,4}[\s.-]?\d{1,4}[\s.-]?\d{1,9}$/;
+    const phoneRegex = /^\+375\s?\(?\d{2}\)?[\s.-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}$/;
     if (!phoneRegex.test(phone)) {
         showNotification('Введите корректный номер телефона', 'error');
         return;
