@@ -15,7 +15,7 @@
     
     <div id="menu-container" class="menu-container">
         <!-- Меню будет загружено через JavaScript -->
-        <div class="loading-menu">
+        <div class="loading">
             <i class="fas fa-spinner fa-spin"></i>
             <p>Загрузка меню...</p>
         </div>
@@ -38,7 +38,6 @@
         border-radius: 20px;
         cursor: pointer;
         transition: all 0.3s;
-        font-size: 14px;
     }
     
     .filter-btn.active {
@@ -52,17 +51,17 @@
     }
     
     .menu-container {
-        min-height: 300px;
         position: relative;
+        min-height: 400px;
     }
     
-    .loading-menu {
+    .loading {
         text-align: center;
         padding: 60px 20px;
         color: var(--gray);
     }
     
-    .loading-menu i {
+    .loading i {
         font-size: 3rem;
         margin-bottom: 20px;
         color: var(--primary-color);
@@ -74,6 +73,7 @@
         border-radius: 10px;
         box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         margin-bottom: 30px;
+        display: block;
     }
     
     .menu-category h3 {
@@ -96,13 +96,11 @@
     }
     
     .menu-item {
-        display: flex;
-        flex-direction: column;
         border: 1px solid var(--gray-light);
         border-radius: 8px;
         overflow: hidden;
-        transition: transform 0.3s, box-shadow 0.3s;
-        background: white;
+        background-color: white;
+        transition: transform 0.3s;
     }
     
     .menu-item:hover {
@@ -111,24 +109,19 @@
     }
     
     .item-image {
-        width: 100%;
-        height: 180px;
+        height: 200px;
         background-size: cover;
         background-position: center;
-        background-color: var(--background-color);
+        background-color: #f5f5f5;
     }
     
     .item-info {
-        padding: 15px;
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
+        padding: 20px;
     }
     
     .item-info h4 {
-        margin-bottom: 8px;
+        margin-bottom: 10px;
         color: var(--heading-color);
-        font-size: 1.1rem;
     }
     
     .item-description {
@@ -136,14 +129,12 @@
         font-size: 0.9rem;
         margin-bottom: 15px;
         line-height: 1.4;
-        flex-grow: 1;
     }
     
     .item-footer {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-top: auto;
     }
     
     .item-price {
@@ -154,30 +145,8 @@
     
     .error-message {
         text-align: center;
-        padding: 40px 20px;
+        padding: 40px;
         color: var(--danger);
-        background-color: white;
-        border-radius: 10px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-    
-    .error-message i {
-        font-size: 3rem;
-        margin-bottom: 15px;
-    }
-    
-    .empty-message {
-        text-align: center;
-        padding: 40px 20px;
-        color: var(--gray);
-        background-color: white;
-        border-radius: 10px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-    
-    .empty-message i {
-        font-size: 3rem;
-        margin-bottom: 15px;
     }
 </style>
 {% endblock %}
@@ -185,43 +154,26 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Загрузка меню
         loadMenu();
         
-        // Функция загрузки меню
         function loadMenu() {
-            const menuContainer = document.getElementById('menu-container');
-            
             fetch('/api/menu')
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Ошибка загрузки меню');
-                    }
-                    return response.json();
-                })
+                .then(response => response.json())
                 .then(data => {
-                    console.log('Меню загружено:', data);
                     renderMenu(data);
-                    setupFilters(data);
+                    setupFilters();
                 })
                 .catch(error => {
                     console.error('Ошибка загрузки меню:', error);
-                    showError('Не удалось загрузить меню. Попробуйте позже.');
+                    showError('Не удалось загрузить меню');
                 });
         }
         
-        // Функция отображения меню
         function renderMenu(categories) {
-            const menuContainer = document.getElementById('menu-container');
+            const container = document.getElementById('menu-container');
             
             if (!categories || categories.length === 0) {
-                menuContainer.innerHTML = `
-                    <div class="empty-message">
-                        <i class="fas fa-utensils"></i>
-                        <h3>Меню временно недоступно</h3>
-                        <p>Попробуйте обновить страницу позже</p>
-                    </div>
-                `;
+                container.innerHTML = '<div class="error-message"><p>Меню временно недоступно</p></div>';
                 return;
             }
             
@@ -235,27 +187,24 @@
                         <div class="menu-items">
                 `;
                 
-                if (category.items && category.items.length > 0) {
-                    category.items.forEach(item => {
-                        html += `
-                            <div class="menu-item" data-item-id="${item.id}">
-                                <div class="item-image" style="background-image: url('${item.image || '/static/images/default-dish.jpg'}')"></div>
-                                <div class="item-info">
-                                    <h4>${item.name}</h4>
-                                    <p class="item-description">${item.description || 'Вкусное блюдо'}</p>
-                                    <div class="item-footer">
-                                        <span class="item-price">${item.price} BYN</span>
-                                        <button class="btn btn-small" onclick="addToCart(${item.id}, '${escapeString(item.name)}', ${item.price}, '${item.image || ''}')">
-                                            В корзину
-                                        </button>
-                                    </div>
+                category.items.forEach(item => {
+                    const safeName = item.name.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                    html += `
+                        <div class="menu-item">
+                            <div class="item-image" style="background-image: url('${item.image || '/static/images/default-dish.jpg'}')"></div>
+                            <div class="item-info">
+                                <h4>${item.name}</h4>
+                                <p class="item-description">${item.description || ''}</p>
+                                <div class="item-footer">
+                                    <span class="item-price">${item.price} BYN</span>
+                                    <button class="btn btn-small" onclick="addToCart(${item.id}, '${safeName}', ${item.price}, '${item.image || ''}')">
+                                        В корзину
+                                    </button>
                                 </div>
                             </div>
-                        `;
-                    });
-                } else {
-                    html += `<p class="empty-message">Нет доступных блюд в этой категории</p>`;
-                }
+                        </div>
+                    `;
+                });
                 
                 html += `
                         </div>
@@ -263,36 +212,23 @@
                 `;
             });
             
-            menuContainer.innerHTML = html;
+            container.innerHTML = html;
         }
         
-        // Функция для экранирования строки
-        function escapeString(str) {
-            return str.replace(/'/g, "\\'").replace(/"/g, '\\"');
-        }
-        
-        // Функция настройки фильтров
-        function setupFilters(categories) {
-            const filterButtons = document.querySelectorAll('.filter-btn');
-            const menuCategories = document.querySelectorAll('.menu-category');
-            
-            filterButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    // Убираем активный класс у всех кнопок
-                    filterButtons.forEach(btn => btn.classList.remove('active'));
-                    // Добавляем активный класс текущей кнопке
+        function setupFilters() {
+            const buttons = document.querySelectorAll('.filter-btn');
+            buttons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    buttons.forEach(b => b.classList.remove('active'));
                     this.classList.add('active');
                     
                     const categoryId = this.getAttribute('data-category');
+                    const categories = document.querySelectorAll('.menu-category');
                     
                     if (categoryId === 'all') {
-                        // Показать все категории
-                        menuCategories.forEach(cat => {
-                            cat.style.display = 'block';
-                        });
+                        categories.forEach(cat => cat.style.display = 'block');
                     } else {
-                        // Показать только выбранную категорию
-                        menuCategories.forEach(cat => {
+                        categories.forEach(cat => {
                             if (cat.getAttribute('data-category') === categoryId) {
                                 cat.style.display = 'block';
                             } else {
@@ -304,79 +240,19 @@
             });
         }
         
-        // Функция показа ошибки
         function showError(message) {
-            const menuContainer = document.getElementById('menu-container');
-            menuContainer.innerHTML = `
+            const container = document.getElementById('menu-container');
+            container.innerHTML = `
                 <div class="error-message">
                     <i class="fas fa-exclamation-triangle"></i>
                     <h3>Ошибка</h3>
                     <p>${message}</p>
-                    <button class="btn btn-primary" onclick="loadMenu()">Повторить попытку</button>
+                    <button class="btn btn-primary" onclick="loadMenu()">Повторить</button>
                 </div>
             `;
         }
-        
-        // Функция добавления в корзину (глобальная)
-        window.addToCart = function(itemId, itemName, itemPrice, itemImage) {
-            // Проверяем, инициализирована ли корзина
-            if (typeof window.addToCartGlobal === 'function') {
-                window.addToCartGlobal(itemId, itemName, itemPrice, itemImage);
-            } else {
-                // Если корзина не инициализирована, показываем сообщение
-                showNotification('Корзина не готова. Пожалуйста, обновите страницу.', 'error');
-            }
-        };
-        
-        // Функция показа уведомлений
-        window.showNotification = function(message, type = 'info') {
-            // Создаем элемент уведомления
-            const notification = document.createElement('div');
-            notification.className = `notification notification-${type}`;
-            notification.innerHTML = `
-                <div class="notification-content">
-                    ${message}
-                </div>
-            `;
-            
-            // Стили уведомления
-            notification.style.cssText = `
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                padding: 15px 20px;
-                background-color: ${type === 'success' ? '#27ae60' : type === 'error' ? '#e74c3c' : '#3498db'};
-                color: white;
-                border-radius: 5px;
-                z-index: 10000;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-                animation: slideIn 0.3s ease-out;
-                max-width: 300px;
-            `;
-            
-            document.body.appendChild(notification);
-            
-            // Удаляем уведомление через 3 секунды
-            setTimeout(() => {
-                notification.style.animation = 'slideOut 0.3s ease-out forwards';
-                setTimeout(() => notification.remove(), 300);
-            }, 3000);
-        };
-        
-        // Добавляем стили для анимаций
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-            
-            @keyframes slideOut {
-                from { transform: translateX(0); opacity: 1; }
-                to { transform: translateX(100%); opacity: 0; }
-            }
-        `;
-        document.head.appendChild(style);
     });
+</script>
+{% endblock %}
 </script>
 {% endblock %}
