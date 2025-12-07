@@ -9,6 +9,101 @@ from database import db
 
 import json
 from sqlalchemy import desc
+from flask_socketio import SocketIO, emit, join_room, leave_room
+import eventlet
+eventlet.monkey_patch()
+# Добавить новые импорты в начало файла
+from flask_socketio import SocketIO, emit, join_room, leave_room
+import eventlet
+eventlet.monkey_patch()
+
+# Инициализация SocketIO после создания приложения
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+# WebSocket события
+@socketio.on('connect')
+def handle_connect():
+    if current_user.is_authenticated:
+        join_room(f'user_{current_user.id}')
+        if current_user.role == 'admin':
+            join_room('admin')
+        print(f'User {current_user.id} connected')
+    emit('connected', {'message': 'Connected'})
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    if current_user.is_authenticated:
+        leave_room(f'user_{current_user.id}')
+        if current_user.role == 'admin':
+            leave_room('admin')
+        print(f'User {current_user.id} disconnected')
+
+# Функция для отправки уведомлений о новых заказах
+def notify_new_order(order):
+    order_data = {
+        'type': 'new_order',
+        'order_id': order.id,
+        'user_id': order.user_id,
+        'total_amount': order.total_amount
+    }
+    socketio.emit('new_order', order_data, room='admin')
+
+# Функция для отправки уведомлений об изменении статуса
+def notify_order_status(order):
+    order_data = {
+        'type': 'order_status_changed',
+        'order_id': order.id,
+        'user_id': order.user_id,
+        'status': order.status
+    }
+    # Отправляем администраторам
+    socketio.emit('order_updated', order_data, room='admin')
+    # Отправляем конкретному пользователю
+    socketio.emit('order_status_changed', order_data, room=f'user_{order.user_id}')
+
+# Обновить функцию order() для отправки уведомлений
+@app.route('/order', methods=['GET', 'POST'])
+@login_required
+def order():
+    if request.method == 'POST':
+        try:
+            # ... существующий код создания заказа ...
+            
+            db.session.commit()
+            
+            # Отправляем уведомление о новом заказе
+            notify_new_order(order)
+            
+            return jsonify({'success': True, 'order_id': order.id})
+            
+        except Exception as e:
+            # ... обработка ошибок ...
+            
+# Обновить функцию update_order_status для отправки уведомлений
+@app.route('/admin/order/<int:order_id>/status', methods=['POST'])
+@login_required
+def update_order_status(order_id):
+    if current_user.role != 'admin':
+        abort(403)
+    
+    order = Order.query.get_or_404(order_id)
+    new_status = request.json.get('status')
+    
+    if new_status in ['pending', 'preparing', 'ready', 'delivered', 'cancelled']:
+        order.status = new_status
+        db.session.commit()
+        
+        # Отправляем уведомление об изменении статуса
+        notify_order_status(order)
+        
+        return jsonify({'success': True})
+    
+    return jsonify({'error': 'Invalid status'}), 400
+
+# Обновить запуск приложения
+if __name__ == '__main__':
+    init_db()
+    socketio.run(app, debug=True, port=5000)
 
 # API для получения обновленных данных меню
 @app.route('/api/menu/update')
