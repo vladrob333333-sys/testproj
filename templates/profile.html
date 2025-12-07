@@ -268,5 +268,156 @@
         };
         return statusMap[status] || status;
     }
+<!-- Добавить в конце блока scripts -->
+<script>
+    // Глобальная переменная для интервала обновления
+    let profileRefreshInterval;
+    
+    // Функция обновления истории заказов
+    function refreshUserOrders() {
+        fetch('/api/user/orders/update')
+            .then(response => response.json())
+            .then(orders => {
+                updateOrdersList(orders);
+            })
+            .catch(error => console.error('Ошибка обновления заказов:', error));
+    }
+    
+    // Функция обновления списка заказов
+    function updateOrdersList(orders) {
+        const ordersContainer = document.querySelector('.orders-container');
+        if (!ordersContainer) return;
+        
+        if (orders.length === 0) {
+            ordersContainer.innerHTML = `
+                <div class="empty-orders">
+                    <div class="empty-icon">
+                        <i class="fas fa-shopping-basket"></i>
+                    </div>
+                    <h3>У вас пока нет заказов</h3>
+                    <p>Сделайте свой первый заказ прямо сейчас!</p>
+                    <a href="{{ url_for('menu') }}" class="btn btn-primary">Перейти в меню</a>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        orders.forEach(order => {
+            html += `
+                <div class="order-card">
+                    <div class="order-header">
+                        <div class="order-id">Заказ #${order.id}</div>
+                        <div class="order-date">${order.created_at}</div>
+                        <div class="order-status status-${order.status}">
+                            ${getStatusText(order.status)}
+                        </div>
+                    </div>
+                    
+                    <div class="order-body">
+                        <div class="order-items">
+                            <h4>Состав заказа:</h4>
+                            ${order.items.map(item => `
+                                <div class="order-item">
+                                    <span class="item-name">${item.name}</span>
+                                    <span class="item-quantity">× ${item.quantity}</span>
+                                    <span class="item-price">${item.price * item.quantity} BYN</span>
+                                </div>
+                            `).join('')}
+                            ${order.items_count > 5 ? `<div class="more-items">... и еще ${order.items_count - 5} позиций</div>` : ''}
+                        </div>
+                        
+                        <div class="order-info">
+                            <div class="info-row">
+                                <span>Адрес доставки:</span>
+                                <span>${order.delivery_address}</span>
+                            </div>
+                            <div class="info-row">
+                                <span>Телефон:</span>
+                                <span>${order.phone}</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="order-footer">
+                        <div class="order-total">
+                            <span>Итого:</span>
+                            <span class="total-amount">${order.total_amount} BYN</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        ordersContainer.innerHTML = html;
+        
+        // Добавляем анимацию для новых или измененных заказов
+        highlightUpdatedOrders();
+    }
+    
+    // Подсветка обновленных заказов
+    function highlightUpdatedOrders() {
+        const orderCards = document.querySelectorAll('.order-card');
+        orderCards.forEach(card => {
+            const status = card.querySelector('.order-status');
+            if (status && status.classList.contains('status-pending')) {
+                card.classList.add('pulse');
+            } else {
+                card.classList.remove('pulse');
+            }
+        });
+    }
+    
+    // Инициализация обновления
+    function initProfileAutoRefresh() {
+        // Обновляем каждые 10 секунд
+        profileRefreshInterval = setInterval(refreshUserOrders, 10000);
+        
+        // Первое обновление через 3 секунды
+        setTimeout(refreshUserOrders, 3000);
+    }
+    
+    // Остановка обновления
+    function stopProfileAutoRefresh() {
+        if (profileRefreshInterval) {
+            clearInterval(profileRefreshInterval);
+            profileRefreshInterval = null;
+        }
+    }
+    
+    // Запускаем при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        initProfileAutoRefresh();
+        
+        // Останавливаем при уходе со страницы
+        window.addEventListener('beforeunload', stopProfileAutoRefresh);
+        
+        // Останавливаем при скрытии вкладки
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                stopProfileAutoRefresh();
+            } else {
+                initProfileAutoRefresh();
+            }
+        });
+    });
+</script>
+
+<!-- Добавить в блок style -->
+<style>
+    .more-items {
+        font-style: italic;
+        color: var(--gray);
+        text-align: center;
+        margin-top: 10px;
+        font-size: 0.9rem;
+    }
+    
+    .order-card.pulse {
+        animation: pulse 2s infinite;
+        border-left: 4px solid var(--primary-color);
+    }
+</style>
+    
 </script>
 {% endblock %}
