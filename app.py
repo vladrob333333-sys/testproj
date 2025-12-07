@@ -447,12 +447,15 @@ def update_order_status(order_id):
     return jsonify({'error': 'Invalid status'}), 400
 
 # Инициализация базы данных
+# Инициализация базы данных
 def init_db():
     with app.app_context():
         db.create_all()
         
-        # Создаем тестовые данные, если их нет
+        # Проверяем, есть ли категории
         if not Category.query.first():
+            print("Создаем тестовые данные...")
+            
             # Категории
             categories = [
                 Category(name='Закуски', description='Легкие закуски к столу'),
@@ -464,7 +467,7 @@ def init_db():
             for category in categories:
                 db.session.add(category)
             
-            db.session.flush()  # Получаем ID категорий
+            db.session.commit()  # Сохраняем категории
             
             # Пример блюд с ценами в BYN
             menu_items = [
@@ -502,7 +505,36 @@ def init_db():
                 db.session.add(user)
             
             db.session.commit()
-        print("База данных инициализирована!")
+            print("Тестовые данные созданы.")
+        else:
+            print("База данных уже содержит данные.")
+
+# Отладочный маршрут для проверки базы данных
+@app.route('/debug/db')
+def debug_db():
+    categories = Category.query.all()
+    menu_items = MenuItem.query.all()
+    users = User.query.all()
+    
+    return jsonify({
+        'categories': [{'id': c.id, 'name': c.name} for c in categories],
+        'menu_items': [{'id': m.id, 'name': m.name, 'category_id': m.category_id} for m in menu_items],
+        'users': [{'id': u.id, 'username': u.username, 'role': u.role} for u in users],
+        'categories_count': len(categories),
+        'menu_items_count': len(menu_items),
+        'users_count': len(users)
+    })
+
+# Маршрут для пересоздания базы данных (только для отладки)
+@app.route('/debug/reset-db')
+def debug_reset_db():
+    if os.environ.get('FLASK_ENV') != 'production':  # Только в разработке
+        db.drop_all()
+        db.create_all()
+        init_db()
+        return jsonify({'message': 'База данных пересоздана'})
+    else:
+        return jsonify({'error': 'Недоступно в production'}), 403
 
 # Для запуска на Render
 if __name__ == '__main__':
