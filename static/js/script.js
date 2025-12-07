@@ -407,3 +407,11 @@ window.processOrder = async function() {
 
 // Инициализация при загрузке страницы
 updateCartCount();
+// Отладочный код
+console.log('Функция addToCart определена?', typeof window.addToCart);
+console.log('Функция showNotification определена?', typeof window.showNotification);
+
+// Принудительно показываем, что скрипт загружен
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Скрипт script.js загружен и инициализирован');
+});
