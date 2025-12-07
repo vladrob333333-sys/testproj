@@ -4,13 +4,14 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import HTTPException
 from datetime import datetime, date
 import json
+import os
 from sqlalchemy import desc, func
 from models import *
 from database import db
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'restaurant-management-secret-key-2024'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///restaurant.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'restaurant-management-secret-key-2024')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///restaurant.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Инициализация базы данных
@@ -503,6 +504,8 @@ def init_db():
             db.session.commit()
         print("База данных инициализирована!")
 
+# Для запуска на Render
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
