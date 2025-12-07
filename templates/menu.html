@@ -212,5 +212,107 @@
             });
         }
     });
+
+<!-- Добавить в конце блока scripts -->
+<script>
+    // Глобальная переменная для интервала обновления меню
+    let menuRefreshInterval;
+    
+    // Функция обновления меню
+    function refreshMenu() {
+        fetch('/api/menu/update')
+            .then(response => response.json())
+            .then(categories => {
+                updateMenuDisplay(categories);
+            })
+            .catch(error => console.error('Ошибка обновления меню:', error));
+    }
+    
+    // Функция обновления отображения меню
+    function updateMenuDisplay(categories) {
+        const menuContainer = document.getElementById('menu-container');
+        if (!menuContainer) return;
+        
+        let html = '';
+        categories.forEach(category => {
+            html += `
+                <div class="menu-category" data-category="${category.id}">
+                    <h3>${category.name}</h3>
+                    <div class="menu-items">
+            `;
+            
+            category.items.forEach(item => {
+                if (item.is_available) {
+                    html += `
+                        <div class="menu-item" data-item-id="${item.id}">
+                            <div class="item-image" style="background-image: url('${item.image || '/static/images/default-dish.jpg'}')"></div>
+                            <div class="item-info">
+                                <h4>${item.name}</h4>
+                                <p class="item-description">${item.description}</p>
+                                <div class="item-footer">
+                                    <span class="item-price">${item.price} BYN</span>
+                                    <button class="btn btn-small" onclick="addToCart(${item.id}, '${item.name.replace(/'/g, "\\'")}', ${item.price}, '${item.image || ''}')">
+                                        В корзину
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+        
+        menuContainer.innerHTML = html;
+        
+        // Восстанавливаем активный фильтр
+        const activeFilter = document.querySelector('.filter-btn.active');
+        if (activeFilter) {
+            const categoryId = activeFilter.getAttribute('data-category');
+            if (categoryId !== 'all') {
+                applyCategoryFilter(categoryId);
+            }
+        }
+    }
+    
+    // Функция применения фильтра категории
+    function applyCategoryFilter(categoryId) {
+        const menuCategories = document.querySelectorAll('.menu-category');
+        menuCategories.forEach(cat => {
+            if (cat.getAttribute('data-category') === categoryId) {
+                cat.style.display = 'block';
+            } else {
+                cat.style.display = 'none';
+            }
+        });
+    }
+    
+    // Инициализация обновления меню
+    function initMenuAutoRefresh() {
+        // Обновляем меню каждые 30 секунд (реже, так как меню меняется не часто)
+        menuRefreshInterval = setInterval(refreshMenu, 30000);
+    }
+    
+    // Остановка обновления
+    function stopMenuAutoRefresh() {
+        if (menuRefreshInterval) {
+            clearInterval(menuRefreshInterval);
+            menuRefreshInterval = null;
+        }
+    }
+    
+    // Запускаем при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        initMenuAutoRefresh();
+        
+        // Останавливаем при уходе со страницы
+        window.addEventListener('beforeunload', stopMenuAutoRefresh);
+    });
+</script>
+    
 </script>
 {% endblock %}
