@@ -2,16 +2,11 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import HTTPException
-from datetime import datetime
+from datetime import datetime, date
 import json
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 from models import *
 from database import db
-
-# Импорты для WebSocket
-from flask_socketio import SocketIO, emit, join_room, leave_room
-import eventlet
-eventlet.monkey_patch()
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'restaurant-management-secret-key-2024'
@@ -24,53 +19,9 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
-# Инициализация SocketIO
-socketio = SocketIO(app, cors_allowed_origins="*")
-
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
-
-# WebSocket события
-@socketio.on('connect')
-def handle_connect():
-    if current_user.is_authenticated:
-        join_room(f'user_{current_user.id}')
-        if current_user.role == 'admin':
-            join_room('admin')
-        print(f'User {current_user.id} connected')
-    emit('connected', {'message': 'Connected'})
-
-@socketio.on('disconnect')
-def handle_disconnect():
-    if current_user.is_authenticated:
-        leave_room(f'user_{current_user.id}')
-        if current_user.role == 'admin':
-            leave_room('admin')
-        print(f'User {current_user.id} disconnected')
-
-# Функция для отправки уведомлений о новых заказах
-def notify_new_order(order):
-    order_data = {
-        'type': 'new_order',
-        'order_id': order.id,
-        'user_id': order.user_id,
-        'total_amount': order.total_amount
-    }
-    socketio.emit('new_order', order_data, room='admin')
-
-# Функция для отправки уведомлений об изменении статуса
-def notify_order_status(order):
-    order_data = {
-        'type': 'order_status_changed',
-        'order_id': order.id,
-        'user_id': order.user_id,
-        'status': order.status
-    }
-    # Отправляем администраторам
-    socketio.emit('order_updated', order_data, room='admin')
-    # Отправляем конкретному пользователю
-    socketio.emit('order_status_changed', order_data, room=f'user_{order.user_id}')
 
 # Middleware для отслеживания просмотров страниц
 @app.before_request
@@ -210,9 +161,6 @@ def order():
                 db.session.add(order_item)
             
             db.session.commit()
-            
-            # Отправляем уведомление о новом заказе
-            notify_new_order(order)
             
             return jsonify({
                 'success': True, 
@@ -414,7 +362,7 @@ def admin_orders():
     if current_user.role != 'admin':
         abort(403)
     
-    orders = Order.query.order_by(Order.created_at.desc()).all()
+    orders = Order.query.order_by(desc(Order.created_at)).all()
     return render_template('admin/orders.html', orders=orders)
 
 # API для администратора - получение обновленных заказов
@@ -435,8 +383,8 @@ def api_admin_orders_update():
     
     if date_filter:
         try:
-            filter_date = datetime.strptime(date_filter, '%Y-%m-%d')
-            query = query.filter(db.func.date(Order.created_at) == filter_date.date())
+            filter_date = datetime.strptime(date_filter, '%Y-%m-%d').date()
+            query = query.filter(func.date(Order.created_at) == filter_date)
         except ValueError:
             pass
     
@@ -444,13 +392,18 @@ def api_admin_orders_update():
     
     result = []
     for order in orders:
+        # Обрезаем длинный адрес
+        address = order.delivery_address
+        if address and len(address) > 50:
+            address = address[:50] + '...'
+            
         result.append({
             'id': order.id,
             'username': order.user.username,
             'total_amount': order.total_amount,
             'status': order.status,
             'created_at': order.created_at.strftime('%d.%m.%Y %H:%M'),
-            'delivery_address': order.delivery_address[:50] + '...' if order.delivery_address and len(order.delivery_address) > 50 else order.delivery_address,
+            'delivery_address': address,
             'phone': order.phone
         })
     
@@ -465,8 +418,8 @@ def api_admin_stats():
     
     total_orders = Order.query.count()
     pending_orders = Order.query.filter_by(status='pending').count()
-    today_orders = Order.query.filter(db.func.date(Order.created_at) == datetime.today().date()).count()
-    total_revenue = db.session.query(db.func.sum(Order.total_amount)).scalar() or 0
+    today_orders = Order.query.filter(func.date(Order.created_at) == date.today()).count()
+    total_revenue = db.session.query(func.sum(Order.total_amount)).scalar() or 0
     
     return jsonify({
         'total_orders': total_orders,
@@ -488,10 +441,6 @@ def update_order_status(order_id):
     if new_status in ['pending', 'preparing', 'ready', 'delivered', 'cancelled']:
         order.status = new_status
         db.session.commit()
-        
-        # Отправляем уведомление об изменении статуса
-        notify_order_status(order)
-        
         return jsonify({'success': True})
     
     return jsonify({'error': 'Invalid status'}), 400
@@ -556,4 +505,4 @@ def init_db():
 
 if __name__ == '__main__':
     init_db()
-    socketio.run(app, debug=True, port=5000)
+    app.run(debug=True, port=5000)
