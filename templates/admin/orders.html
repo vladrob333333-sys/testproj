@@ -27,7 +27,7 @@
             </div>
             <div class="stat-card">
                 <span class="stat-label">На сумму</span>
-                <span class="stat-value">{{ "%.2f"|format(orders|sum(attribute='total_amount')) }}₽</span>
+                <span class="stat-value">{{ "%.2f"|format(orders|sum(attribute='total_amount')) }}BYN</span>
             </div>
         </div>
     </div>
@@ -50,7 +50,7 @@
                     <td>#{{ order.id }}</td>
                     <td>{{ order.user.username }}</td>
                     <td>{{ order.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
-                    <td>{{ order.total_amount }}₽</td>
+                    <td>{{ order.total_amount }}BYN</td>
                     <td>
                         <span class="status status-{{ order.status }}">
                             {{ get_status_text(order.status) }}
