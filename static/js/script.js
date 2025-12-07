@@ -1,5 +1,10 @@
 // Основной JavaScript файл
 
+// Глобальные переменные
+let cart = JSON.parse(localStorage.getItem('restaurant_cart')) || [];
+let isCartInitialized = false;
+
+// Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
     // Валидация форм
     initFormValidation();
@@ -7,8 +12,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Инициализация корзины
     initCart();
     
-    // Инициализация меню
-    initMenu();
+    // Инициализация меню (если есть)
+    if (typeof initMenu === 'function') {
+        initMenu();
+    }
+    
+    // Помечаем, что корзина инициализирована
+    isCartInitialized = true;
+    console.log('Корзина инициализирована');
 });
 
 // Валидация форм
@@ -79,9 +90,7 @@ function clearError(input, errorElement) {
     }
 }
 
-// Корзина
-let cart = JSON.parse(localStorage.getItem('restaurant_cart')) || [];
-
+// Корзина - инициализация
 function initCart() {
     // Сохранение корзины в localStorage
     window.saveCart = function() {
@@ -98,8 +107,10 @@ function initCart() {
         }
     }
     
-    // Добавление в корзину
+    // Добавление в корзину - ГЛОБАЛЬНАЯ ФУНКЦИЯ
     window.addToCart = function(itemId, itemName, itemPrice, itemImage) {
+        console.log('Добавление в корзину:', {itemId, itemName, itemPrice});
+        
         const existingItem = cart.find(item => item.id === itemId);
         
         if (existingItem) {
@@ -109,20 +120,22 @@ function initCart() {
                 id: itemId,
                 name: itemName,
                 price: itemPrice,
-                image: itemImage,
+                image: itemImage || '',
                 quantity: 1
             });
         }
         
         saveCart();
-        showNotification('Товар добавлен в корзину', 'success');
+        showNotification('Товар добавлен в корзину!', 'success');
     }
     
     // Удаление из корзины
     window.removeFromCart = function(itemId) {
         cart = cart.filter(item => item.id !== itemId);
         saveCart();
-        renderCart();
+        if (typeof renderCart === 'function') {
+            renderCart();
+        }
     }
     
     // Изменение количества
@@ -134,7 +147,9 @@ function initCart() {
                 removeFromCart(itemId);
             } else {
                 saveCart();
-                renderCart();
+                if (typeof renderCart === 'function') {
+                    renderCart();
+                }
             }
         }
     }
@@ -162,14 +177,14 @@ function initCart() {
                     <div class="cart-item">
                         <div class="item-info">
                             <h4>${item.name}</h4>
-                            <p class="item-price">${item.price}BYN × ${item.quantity}</p>
+                            <p class="item-price">${item.price} BYN × ${item.quantity}</p>
                         </div>
                         <div class="item-quantity">
                             <button class="quantity-btn" onclick="updateQuantity(${item.id}, -1)">-</button>
                             <span>${item.quantity}</span>
                             <button class="quantity-btn" onclick="updateQuantity(${item.id}, 1)">+</button>
                         </div>
-                        <div class="item-total">${itemTotal}BYN</div>
+                        <div class="item-total">${itemTotal} BYN</div>
                         <button class="btn btn-small btn-outline" onclick="removeFromCart(${item.id})">Удалить</button>
                     </div>
                 `;
@@ -184,7 +199,9 @@ function initCart() {
     window.clearCart = function() {
         cart = [];
         saveCart();
-        renderCart();
+        if (typeof renderCart === 'function') {
+            renderCart();
+        }
     }
     
     // Получение данных корзины для отправки
@@ -236,7 +253,7 @@ function renderMenu(categories) {
                         <h4>${item.name}</h4>
                         <p class="item-description">${item.description}</p>
                         <div class="item-footer">
-                            <span class="item-price">${item.price}BYN</span>
+                            <span class="item-price">${item.price} BYN</span>
                             <button class="btn btn-small" onclick="addToCart(${item.id}, '${item.name.replace(/'/g, "\\'")}', ${item.price}, '${item.image || ''}')">
                                 В корзину
                             </button>
@@ -255,8 +272,8 @@ function renderMenu(categories) {
     menuContainer.innerHTML = html;
 }
 
-// Уведомления
-function showNotification(message, type = 'info') {
+// Уведомления - ГЛОБАЛЬНАЯ ФУНКЦИЯ
+window.showNotification = function(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.textContent = message;
@@ -271,6 +288,7 @@ function showNotification(message, type = 'info') {
         border-radius: 5px;
         z-index: 10000;
         animation: slideIn 0.3s ease-out;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
     `;
     
     document.body.appendChild(notification);
@@ -303,6 +321,32 @@ style.textContent = `
         from { transform: translateX(0); opacity: 1; }
         to { transform: translateX(100%); opacity: 0; }
     }
+    
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 5px;
+        z-index: 10000;
+        animation: slideIn 0.3s ease-out;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+    
+    .notification-success {
+        background-color: #27ae60;
+        color: white;
+    }
+    
+    .notification-error {
+        background-color: #e74c3c;
+        color: white;
+    }
+    
+    .notification-info {
+        background-color: #3498db;
+        color: white;
+    }
 `;
 document.head.appendChild(style);
 
@@ -325,7 +369,7 @@ window.processOrder = async function() {
     }
     
     // Проверка формата телефона
-    const phoneRegex = /^\+375\s?\(?\d{2}\)?[\s.-]?\d{3}[\s.-]?\d{2}[\s.-]?\d{2}$/;
+    const phoneRegex = /^[\+]\d{1,3}\s?\(?\d{1,4}\)?[\s.-]?\d{1,4}[\s.-]?\d{1,4}[\s.-]?\d{1,9}$/;
     if (!phoneRegex.test(phone)) {
         showNotification('Введите корректный номер телефона', 'error');
         return;
@@ -363,162 +407,3 @@ window.processOrder = async function() {
 
 // Инициализация при загрузке страницы
 updateCartCount();
-
-// Добавить в конец файла после существующего кода
-
-// Функция для проверки обновлений через WebSocket (если поддерживается)
-function initWebSocket() {
-    if ("WebSocket" in window) {
-        try {
-            // Создаем WebSocket соединение
-            const wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-            const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
-            
-            const socket = new WebSocket(wsUrl);
-            
-            socket.onopen = function() {
-                console.log("WebSocket соединение установлено");
-            };
-            
-            socket.onmessage = function(event) {
-                const data = JSON.parse(event.data);
-                handleWebSocketMessage(data);
-            };
-            
-            socket.onclose = function() {
-                console.log("WebSocket соединение закрыто. Пытаемся переподключиться...");
-                // Пытаемся переподключиться через 5 секунд
-                setTimeout(initWebSocket, 5000);
-            };
-            
-            socket.onerror = function(error) {
-                console.error("WebSocket ошибка:", error);
-            };
-            
-            // Сохраняем сокет в глобальной переменной
-            window.wsConnection = socket;
-            
-        } catch (error) {
-            console.error("Ошибка при создании WebSocket:", error);
-        }
-    } else {
-        console.log("Ваш браузер не поддерживает WebSocket. Используется polling.");
-    }
-}
-
-// Обработка сообщений от WebSocket
-function handleWebSocketMessage(data) {
-    switch (data.type) {
-        case 'order_updated':
-            if (currentUserIsAdmin()) {
-                showNotification(`Заказ #${data.order_id} обновлен`, 'info');
-                refreshAdminData && refreshAdminData();
-            }
-            break;
-            
-        case 'new_order':
-            if (currentUserIsAdmin()) {
-                showNotification(`Новый заказ #${data.order_id}`, 'success');
-                refreshAdminData && refreshAdminData();
-            }
-            break;
-            
-        case 'order_status_changed':
-            if (currentUserIsCustomer() && data.user_id === getCurrentUserId()) {
-                showNotification(`Статус вашего заказа #${data.order_id} изменен`, 'info');
-                refreshUserOrders && refreshUserOrders();
-            }
-            break;
-    }
-}
-
-// Вспомогательные функции для проверки ролей
-function currentUserIsAdmin() {
-    // Проверяем, находится ли пользователь на странице администратора
-    return window.location.pathname.includes('/admin/') || 
-           document.querySelector('[href="/admin/orders"]');
-}
-
-function currentUserIsCustomer() {
-    return !currentUserIsAdmin();
-}
-
-function getCurrentUserId() {
-    // Здесь можно получить ID текущего пользователя из мета-тега или переменной
-    const userIdElement = document.querySelector('[data-user-id]');
-    return userIdElement ? userIdElement.getAttribute('data-user-id') : null;
-}
-
-// Инициализация WebSocket при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
-    // Запускаем WebSocket только если пользователь авторизован
-    if (isAuthenticated) {
-        initWebSocket();
-    }
-    
-    // Добавляем мета-тег с ID пользователя (если авторизован)
-    if (isAuthenticated) {
-        const meta = document.createElement('meta');
-        meta.name = 'user-id';
-        meta.content = '{{ current_user.id if current_user else "" }}';
-        document.head.appendChild(meta);
-    }
-});
-
-// Добавить в base.html для передачи данных пользователя
-{% if current_user.is_authenticated %}
-<script>
-    window.currentUserId = {{ current_user.id }};
-    window.currentUserRole = '{{ current_user.role }}';
-    window.isAuthenticated = true;
-</script>
-{% else %}
-<script>
-    window.isAuthenticated = false;
-</script>
-{% endif %}
-
-// В конце файла script.js добавьте глобальную функцию для корзины
-window.addToCartGlobal = function(itemId, itemName, itemPrice, itemImage) {
-    // Логика добавления в корзину
-    let cart = JSON.parse(localStorage.getItem('restaurant_cart')) || [];
-    
-    const existingItem = cart.find(item => item.id === itemId);
-    
-    if (existingItem) {
-        existingItem.quantity += 1;
-    } else {
-        cart.push({
-            id: itemId,
-            name: itemName,
-            price: itemPrice,
-            image: itemImage,
-            quantity: 1
-        });
-    }
-    
-    localStorage.setItem('restaurant_cart', JSON.stringify(cart));
-    
-    // Обновляем счетчик корзины
-    updateCartCount();
-    
-    // Показываем уведомление
-    if (window.showNotification) {
-        window.showNotification('Товар добавлен в корзину!', 'success');
-    }
-};
-
-// Функция обновления счетчика корзины
-function updateCartCount() {
-    const cart = JSON.parse(localStorage.getItem('restaurant_cart')) || [];
-    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-    
-    // Обновляем счетчик в навигации, если есть
-    const countElement = document.getElementById('cart-count');
-    if (countElement) {
-        countElement.textContent = totalItems;
-    }
-}
-
-// Вызываем обновление счетчика при загрузке
-document.addEventListener('DOMContentLoaded', updateCartCount);
