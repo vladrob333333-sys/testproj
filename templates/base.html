@@ -55,17 +55,6 @@
         </div>
     </nav>
 
-    <script>
-        // Передаем данные пользователя в JavaScript
-        {% if current_user.is_authenticated %}
-            window.currentUserId = {{ current_user.id }};
-            window.currentUserRole = '{{ current_user.role }}';
-            window.isAuthenticated = true;
-        {% else %}
-            window.isAuthenticated = false;
-        {% endif %}
-    </script>
-    
     <!-- Сообщения -->
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
