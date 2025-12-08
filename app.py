@@ -9,6 +9,11 @@ from sqlalchemy import desc, func
 from models import *
 from database import db
 
+# Для WebSocket (используем простой polling для Render.com)
+import threading
+import time
+from collections import defaultdict
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'restaurant-management-secret-key-2024')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///restaurant.db')
@@ -20,9 +25,40 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+# Хранилище для обновлений в реальном времени
+realtime_updates = defaultdict(list)
+update_lock = threading.Lock()
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+def add_realtime_update(user_id, update_type, data):
+    """Добавить обновление для пользователя"""
+    with update_lock:
+        realtime_updates[user_id].append({
+            'type': update_type,
+            'data': data,
+            'timestamp': datetime.now().isoformat()
+        })
+        # Храним только последние 100 обновлений
+        if len(realtime_updates[user_id]) > 100:
+            realtime_updates[user_id] = realtime_updates[user_id][-100:]
+
+def get_realtime_updates(user_id, last_timestamp=None):
+    """Получить новые обновления для пользователя"""
+    with update_lock:
+        if user_id not in realtime_updates:
+            return []
+        
+        if last_timestamp:
+            updates = [u for u in realtime_updates[user_id] 
+                      if u['timestamp'] > last_timestamp]
+        else:
+            # Возвращаем последние 10 обновлений
+            updates = realtime_updates[user_id][-10:]
+        
+        return updates
 
 # Middleware для отслеживания просмотров страниц
 @app.before_request
@@ -75,14 +111,12 @@ def internal_error(error):
 # Главная страница
 @app.route('/')
 def index():
-    # Пример данных для слайдера
     slider_items = [
         {'image': 'slide1.jpg', 'title': 'Добро пожаловать', 'description': 'Лучшие блюда от шеф-повара'},
         {'image': 'slide2.jpg', 'title': 'Специальное предложение', 'description': 'Скидка 20% на все заказы от 50 BYN'},
         {'image': 'slide3.jpg', 'title': 'Новое меню', 'description': 'Попробуйте наши сезонные блюда'}
     ]
     
-    # Информационные блоки
     info_blocks = [
         {'icon': 'clock', 'title': 'Часы работы', 'text': 'Пн-Вс: 10:00 - 23:00'},
         {'icon': 'phone', 'title': 'Доставка', 'text': 'Быстрая доставка за 60 минут'},
@@ -107,7 +141,6 @@ def menu():
 def order():
     if request.method == 'POST':
         try:
-            # Получаем данные из формы
             cart_items = request.json.get('items', [])
             delivery_address = request.json.get('delivery_address', '')
             phone = request.json.get('phone', '')
@@ -116,7 +149,6 @@ def order():
             if not cart_items:
                 return jsonify({'error': 'Корзина пуста'}), 400
             
-            # Считаем общую сумму
             total_amount = 0
             order_items_data = []
             
@@ -134,11 +166,9 @@ def order():
                     'price_at_time': menu_item.price
                 })
             
-            # Проверяем, что есть действительные товары
             if len(order_items_data) == 0:
                 return jsonify({'error': 'Нет действительных товаров в заказе'}), 400
             
-            # Создаем заказ с общей суммой
             order = Order(
                 user_id=current_user.id,
                 delivery_address=delivery_address,
@@ -149,9 +179,8 @@ def order():
             )
             
             db.session.add(order)
-            db.session.flush()  # Получаем ID заказа
+            db.session.flush()
             
-            # Добавляем позиции заказа
             for item_data in order_items_data:
                 order_item = OrderItem(
                     order_id=order.id,
@@ -162,6 +191,23 @@ def order():
                 db.session.add(order_item)
             
             db.session.commit()
+            
+            # Отправляем уведомления в реальном времени
+            add_realtime_update(current_user.id, 'new_order', {
+                'order_id': order.id,
+                'total_amount': total_amount,
+                'status': 'pending'
+            })
+            
+            # Администраторы также получают уведомления
+            admins = User.query.filter_by(role='admin').all()
+            for admin in admins:
+                add_realtime_update(admin.id, 'new_order_admin', {
+                    'order_id': order.id,
+                    'user_id': current_user.id,
+                    'username': current_user.username,
+                    'total_amount': total_amount
+                })
             
             return jsonify({
                 'success': True, 
@@ -174,7 +220,6 @@ def order():
             print(f"Ошибка при создании заказа: {str(e)}")
             return jsonify({'error': f'Ошибка сервера: {str(e)}'}), 500
     
-    # GET запрос - отображаем форму заказа
     menu_items = MenuItem.query.filter_by(is_available=True).all()
     return render_template('order.html', menu_items=menu_items)
 
@@ -184,6 +229,78 @@ def order():
 def user_orders():
     orders = Order.query.filter_by(user_id=current_user.id).order_by(Order.created_at.desc()).all()
     return render_template('profile.html', orders=orders)
+
+# API для получения обновлений в реальном времени
+@app.route('/api/realtime/updates')
+@login_required
+def get_realtime_updates_api():
+    last_timestamp = request.args.get('last_timestamp')
+    updates = get_realtime_updates(current_user.id, last_timestamp)
+    return jsonify({
+        'updates': updates,
+        'timestamp': datetime.now().isoformat()
+    })
+
+# API для проверки новых заказов
+@app.route('/api/orders/check_new')
+@login_required
+def check_new_orders():
+    # Проверяем новые заказы с момента последней проверки
+    last_check = request.args.get('last_check')
+    if last_check:
+        try:
+            last_check_time = datetime.fromisoformat(last_check)
+        except:
+            last_check_time = datetime.now() - timedelta(minutes=5)
+    else:
+        last_check_time = datetime.now() - timedelta(minutes=5)
+    
+    # Для пользователя - его новые заказы
+    if current_user.role == 'customer':
+        new_orders = Order.query.filter(
+            Order.user_id == current_user.id,
+            Order.created_at > last_check_time
+        ).count()
+    # Для администратора - все новые заказы
+    else:
+        new_orders = Order.query.filter(
+            Order.created_at > last_check_time
+        ).count()
+    
+    return jsonify({
+        'has_new': new_orders > 0,
+        'count': new_orders,
+        'timestamp': datetime.now().isoformat()
+    })
+
+# API для получения последних заказов
+@app.route('/api/orders/latest')
+@login_required
+def get_latest_orders():
+    limit = int(request.args.get('limit', 10))
+    
+    if current_user.role == 'admin':
+        orders = Order.query.order_by(Order.created_at.desc()).limit(limit).all()
+    else:
+        orders = Order.query.filter_by(user_id=current_user.id)\
+                           .order_by(Order.created_at.desc()).limit(limit).all()
+    
+    result = []
+    for order in orders:
+        order_data = {
+            'id': order.id,
+            'total_amount': order.total_amount,
+            'status': order.status,
+            'created_at': order.created_at.strftime('%d.%m.%Y %H:%M'),
+            'items_count': len(order.items)
+        }
+        
+        if current_user.role == 'admin':
+            order_data['username'] = order.user.username
+        
+        result.append(order_data)
+    
+    return jsonify(result)
 
 # Регистрация
 @app.route('/register', methods=['GET', 'POST'])
@@ -197,7 +314,6 @@ def register():
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         
-        # Валидация
         errors = []
         if not username or len(username) < 3:
             errors.append('Имя пользователя должно содержать минимум 3 символа')
@@ -208,7 +324,6 @@ def register():
         if password != confirm_password:
             errors.append('Пароли не совпадают')
         
-        # Проверка уникальности
         if User.query.filter_by(username=username).first():
             errors.append('Пользователь с таким именем уже существует')
         if User.query.filter_by(email=email).first():
@@ -218,7 +333,6 @@ def register():
             for error in errors:
                 flash(error, 'danger')
         else:
-            # Создание пользователя
             user = User(
                 username=username,
                 email=email,
@@ -293,36 +407,6 @@ def api_menu():
     
     return jsonify(result)
 
-# API для получения обновленных данных меню
-@app.route('/api/menu/update')
-def api_menu_update():
-    categories = Category.query.all()
-    menu_items = MenuItem.query.filter_by(is_available=True).all()
-    
-    result = []
-    for category in categories:
-        category_data = {
-            'id': category.id,
-            'name': category.name,
-            'items': []
-        }
-        
-        for item in menu_items:
-            if item.category_id == category.id:
-                category_data['items'].append({
-                    'id': item.id,
-                    'name': item.name,
-                    'description': item.description,
-                    'price': item.price,
-                    'image': item.image,
-                    'is_available': item.is_available
-                })
-        
-        if category_data['items']:
-            result.append(category_data)
-    
-    return jsonify(result)
-
 # API для получения обновленных заказов пользователя
 @app.route('/api/user/orders/update')
 @login_required
@@ -345,7 +429,7 @@ def api_user_orders_update():
             'items': []
         }
         
-        for item in order.items[:5]:  # Берем только первые 5 позиций
+        for item in order.items[:5]:
             order_data['items'].append({
                 'name': item.menu_item.name,
                 'quantity': item.quantity,
@@ -373,7 +457,6 @@ def api_admin_orders_update():
     if current_user.role != 'admin':
         abort(403)
     
-    # Получение параметров фильтрации
     status_filter = request.args.get('status', 'all')
     date_filter = request.args.get('date', None)
     
@@ -393,7 +476,6 @@ def api_admin_orders_update():
     
     result = []
     for order in orders:
-        # Обрезаем длинный адрес
         address = order.delivery_address
         if address and len(address) > 50:
             address = address[:50] + '...'
@@ -410,7 +492,7 @@ def api_admin_orders_update():
     
     return jsonify(result)
 
-# API для получения статистики (для администратора)
+# API для получения статистики
 @app.route('/api/admin/stats')
 @login_required
 def api_admin_stats():
@@ -442,21 +524,26 @@ def update_order_status(order_id):
     if new_status in ['pending', 'preparing', 'ready', 'delivered', 'cancelled']:
         order.status = new_status
         db.session.commit()
+        
+        # Отправляем уведомление пользователю
+        add_realtime_update(order.user_id, 'order_status_changed', {
+            'order_id': order.id,
+            'status': new_status,
+            'status_text': get_status_text(new_status)
+        })
+        
         return jsonify({'success': True})
     
     return jsonify({'error': 'Invalid status'}), 400
 
 # Инициализация базы данных
-# Инициализация базы данных
 def init_db():
     with app.app_context():
         db.create_all()
         
-        # Проверяем, есть ли категории
         if not Category.query.first():
             print("Создаем тестовые данные...")
             
-            # Категории
             categories = [
                 Category(name='Закуски', description='Легкие закуски к столу'),
                 Category(name='Основные блюда', description='Горячие блюда'),
@@ -467,9 +554,8 @@ def init_db():
             for category in categories:
                 db.session.add(category)
             
-            db.session.commit()  # Сохраняем категории
+            db.session.commit()
             
-            # Пример блюд с ценами в BYN
             menu_items = [
                 MenuItem(name='Брускетта', description='С помидорами и базиликом', price=12.5, category_id=1, image='bruschetta.jpg'),
                 MenuItem(name='Стейк', description='Говяжий стейк с овощами', price=42.5, category_id=2, image='steak.jpg'),
@@ -484,7 +570,6 @@ def init_db():
             for item in menu_items:
                 db.session.add(item)
             
-            # Создаем тестового администратора с белорусским email
             if not User.query.filter_by(username='admin').first():
                 admin = User(
                     username='admin',
@@ -494,7 +579,6 @@ def init_db():
                 )
                 db.session.add(admin)
             
-            # Создаем тестового пользователя с белорусским email
             if not User.query.filter_by(username='user').first():
                 user = User(
                     username='user',
@@ -505,38 +589,8 @@ def init_db():
                 db.session.add(user)
             
             db.session.commit()
-            print("Тестовые данные созданы.")
-        else:
-            print("База данных уже содержит данные.")
+        print("База данных инициализирована!")
 
-# Отладочный маршрут для проверки базы данных
-@app.route('/debug/db')
-def debug_db():
-    categories = Category.query.all()
-    menu_items = MenuItem.query.all()
-    users = User.query.all()
-    
-    return jsonify({
-        'categories': [{'id': c.id, 'name': c.name} for c in categories],
-        'menu_items': [{'id': m.id, 'name': m.name, 'category_id': m.category_id} for m in menu_items],
-        'users': [{'id': u.id, 'username': u.username, 'role': u.role} for u in users],
-        'categories_count': len(categories),
-        'menu_items_count': len(menu_items),
-        'users_count': len(users)
-    })
-
-# Маршрут для пересоздания базы данных (только для отладки)
-@app.route('/debug/reset-db')
-def debug_reset_db():
-    if os.environ.get('FLASK_ENV') != 'production':  # Только в разработке
-        db.drop_all()
-        db.create_all()
-        init_db()
-        return jsonify({'message': 'База данных пересоздана'})
-    else:
-        return jsonify({'error': 'Недоступно в production'}), 403
-
-# Для запуска на Render
 if __name__ == '__main__':
     init_db()
     port = int(os.environ.get('PORT', 5000))
