@@ -1,0 +1,89 @@
+<%- include('../layout', { 
+    title: 'Вход - Ресторан Delicious',
+    currentPage: 'login'
+}) %>
+
+<section class="section">
+    <div class="container">
+        <div class="form-container">
+            <h1 class="form-title">
+                <i class="fas fa-sign-in-alt"></i> Вход в аккаунт
+            </h1>
+            
+            <% if (errors && errors.length > 0) { %>
+                <div class="alert alert-danger">
+                    <% errors.forEach(error => { %>
+                        <p><%= error.msg %></p>
+                    <% }); %>
+                </div>
+            <% } %>
+            
+            <form action="/login" method="POST" id="login-form">
+                <div class="form-group">
+                    <label for="email" class="form-label">Email адрес</label>
+                    <input type="email" 
+                           id="email" 
+                           name="email" 
+                           class="form-control" 
+                           required
+                           placeholder="Введите ваш email">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password" class="form-label">Пароль</label>
+                    <input type="password" 
+                           id="password" 
+                           name="password" 
+                           class="form-control" 
+                           required
+                           placeholder="Введите ваш пароль">
+                </div>
+                
+                <div class="form-group">
+                    <div class="form-check">
+                        <input type="checkbox" id="remember" name="remember" class="form-check-input">
+                        <label for="remember" class="form-check-label">Запомнить меня</label>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block">
+                    <i class="fas fa-sign-in-alt"></i> Войти
+                </button>
+                
+                <div class="text-center mt-4">
+                    <p>Нет аккаунта? <a href="/register">Зарегистрируйтесь</a></p>
+                    <p><a href="#">Забыли пароль?</a></p>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+
+<style>
+    .alert {
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 20px;
+    }
+    
+    .alert-danger {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .form-check {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .form-check-input {
+        width: 18px;
+        height: 18px;
+    }
+    
+    .form-check-label {
+        margin: 0;
+    }
+</style>

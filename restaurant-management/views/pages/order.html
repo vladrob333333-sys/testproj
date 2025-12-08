@@ -1,0 +1,335 @@
+<%- include('../layout', { 
+    title: 'Заказ - Ресторан Delicious',
+    currentPage: 'order'
+}) %>
+
+<section class="section">
+    <div class="container">
+        <h1 class="section-title">Оформление заказа</h1>
+        
+        <div class="order-container">
+            <!-- Левая колонка: Выбор блюд -->
+            <div class="order-column">
+                <h2><i class="fas fa-utensils"></i> Выберите блюда</h2>
+                
+                <div class="menu-selection">
+                    <% if (menuItems && menuItems.length > 0) { %>
+                        <% menuItems.forEach(item => { %>
+                            <div class="menu-selection-item" data-category="<%= item.category.toLowerCase() %>">
+                                <div class="menu-selection-info">
+                                    <h3><%= item.name %></h3>
+                                    <p class="menu-selection-description"><%= item.description %></p>
+                                    <span class="menu-selection-price"><%= item.price %> ₽</span>
+                                </div>
+                                
+                                <div class="menu-selection-controls">
+                                    <div class="quantity-selector">
+                                        <button class="quantity-btn minus" data-item-id="<%= item.id %>">-</button>
+                                        <input type="number" 
+                                               id="quantity-<%= item.id %>" 
+                                               class="quantity-input" 
+                                               data-item-id="<%= item.id %>"
+                                               value="1" 
+                                               min="1" 
+                                               max="10"
+                                               disabled>
+                                        <button class="quantity-btn plus" data-item-id="<%= item.id %>">+</button>
+                                    </div>
+                                    
+                                    <input type="checkbox" 
+                                           id="order-item-<%= item.id %>" 
+                                           class="menu-item-checkbox"
+                                           value="<%= item.id %>"
+                                           data-name="<%= item.name %>"
+                                           data-price="<%= item.price %>">
+                                    <label for="order-item-<%= item.id %>" class="btn btn-outline">
+                                        Выбрать
+                                    </label>
+                                </div>
+                            </div>
+                        <% }); %>
+                    <% } else { %>
+                        <p class="text-center">Меню временно недоступно</p>
+                    <% } %>
+                </div>
+            </div>
+            
+            <!-- Правая колонка: Форма заказа -->
+            <div class="order-column">
+                <h2><i class="fas fa-clipboard-list"></i> Детали заказа</h2>
+                
+                <form id="order-form" class="order-form">
+                    <!-- Сводка заказа -->
+                    <div class="order-summary-card">
+                        <h3><i class="fas fa-shopping-cart"></i> Ваш заказ</h3>
+                        <div id="order-summary" class="order-summary">
+                            <p class="empty-order">Выберите блюда из меню</p>
+                        </div>
+                        <div class="order-total">
+                            <span>Итого:</span>
+                            <span id="total-price">0.00</span> ₽
+                        </div>
+                    </div>
+                    
+                    <!-- Детали бронирования -->
+                    <div class="form-group">
+                        <label for="booking_date" class="form-label">
+                            <i class="fas fa-calendar-alt"></i> Дата и время
+                        </label>
+                        <input type="datetime-local" 
+                               id="booking_date" 
+                               name="booking_date" 
+                               class="form-control" 
+                               required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="persons" class="form-label">
+                            <i class="fas fa-users"></i> Количество гостей
+                        </label>
+                        <select id="persons" name="persons" class="form-control" required>
+                            <option value="1">1 гость</option>
+                            <option value="2" selected>2 гостя</option>
+                            <option value="3">3 гостя</option>
+                            <option value="4">4 гостя</option>
+                            <option value="5">5 гостей</option>
+                            <option value="6">6 гостей</option>
+                            <option value="7">7 гостей</option>
+                            <option value="8">8 гостей</option>
+                            <option value="9">9 гостей</option>
+                            <option value="10">10 гостей</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Особые пожелания -->
+                    <div class="form-group">
+                        <label for="special_requests" class="form-label">
+                            <i class="fas fa-comment-alt"></i> Особые пожелания
+                        </label>
+                        <textarea id="special_requests" 
+                                  name="special_requests" 
+                                  class="form-control" 
+                                  rows="4" 
+                                  placeholder="Аллергии, предпочтения по готовке, особые пожелания..."></textarea>
+                    </div>
+                    
+                    <!-- Активные бронирования -->
+                    <% if (userBookings && userBookings.length > 0) { %>
+                        <div class="active-bookings">
+                            <h3><i class="fas fa-clock"></i> Ваши бронирования</h3>
+                            <% userBookings.forEach(booking => { %>
+                                <div class="booking-card">
+                                    <div class="booking-info">
+                                        <span class="booking-date">
+                                            <i class="fas fa-calendar"></i>
+                                            <%= new Date(booking.booking_date).toLocaleDateString('ru-RU', {
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric',
+                                                hour: '2-digit',
+                                                minute: '2-digit'
+                                            }) %>
+                                        </span>
+                                        <span class="booking-persons">
+                                            <i class="fas fa-user"></i> <%= booking.persons %> чел.
+                                        </span>
+                                        <span class="booking-status status-<%= booking.status %>">
+                                            <%= booking.status === 'confirmed' ? 'Подтверждено' : 
+                                               booking.status === 'pending' ? 'Ожидание' : 
+                                               booking.status === 'cancelled' ? 'Отменено' : booking.status %>
+                                        </span>
+                                    </div>
+                                </div>
+                            <% }); %>
+                        </div>
+                    <% } %>
+                    
+                    <!-- Кнопка отправки -->
+                    <button type="submit" class="btn btn-primary btn-lg btn-block">
+                        <i class="fas fa-check-circle"></i> Подтвердить заказ
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+    .order-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        margin-top: 40px;
+    }
+    
+    @media (max-width: 992px) {
+        .order-container {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    .menu-selection {
+        max-height: 600px;
+        overflow-y: auto;
+        padding-right: 10px;
+    }
+    
+    .menu-selection-item {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .menu-selection-info {
+        flex: 1;
+    }
+    
+    .menu-selection-info h3 {
+        margin-bottom: 5px;
+        color: #333;
+    }
+    
+    .menu-selection-description {
+        color: #666;
+        font-size: 14px;
+        margin-bottom: 10px;
+    }
+    
+    .menu-selection-price {
+        font-weight: bold;
+        color: #C41E3A;
+        font-size: 18px;
+    }
+    
+    .menu-selection-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .order-summary-card {
+        background-color: white;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        margin-bottom: 30px;
+    }
+    
+    .order-summary-card h3 {
+        margin-bottom: 15px;
+        color: #8B4513;
+    }
+    
+    .order-summary ul {
+        list-style: none;
+        margin-bottom: 20px;
+    }
+    
+    .order-summary li {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+    }
+    
+    .empty-order {
+        text-align: center;
+        color: #666;
+        font-style: italic;
+    }
+    
+    .order-total {
+        display: flex;
+        justify-content: space-between;
+        font-size: 24px;
+        font-weight: bold;
+        color: #C41E3A;
+        padding-top: 15px;
+        border-top: 2px solid #eee;
+    }
+    
+    .active-bookings {
+        margin: 30px 0;
+    }
+    
+    .booking-card {
+        background-color: white;
+        padding: 15px;
+        border-radius: 10px;
+        margin-bottom: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    
+    .booking-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .booking-status {
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .status-confirmed {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-pending {
+        background-color: #fff3cd;
+        color: #856404;
+    }
+    
+    .status-cancelled {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    .btn-block {
+        width: 100%;
+        padding: 15px;
+        font-size: 18px;
+    }
+    
+    .btn-lg {
+        padding: 15px 30px;
+    }
+</style>
+
+<script>
+    // Автозаполнение формы из URL параметров
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const addItemId = urlParams.get('add');
+        
+        if (addItemId) {
+            const checkbox = document.querySelector(`#order-item-${addItemId}`);
+            const quantityInput = document.querySelector(`#quantity-${addItemId}`);
+            
+            if (checkbox && quantityInput) {
+                checkbox.checked = true;
+                quantityInput.disabled = false;
+                
+                // Имитируем событие change для добавления в заказ
+                const event = new Event('change');
+                checkbox.dispatchEvent(event);
+                
+                // Прокрутка к элементу
+                checkbox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Убираем параметр из URL без перезагрузки страницы
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+    });
+</script>

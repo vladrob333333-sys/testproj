@@ -1,0 +1,186 @@
+<%- include('../layout', { 
+    title: 'Главная - Ресторан Delicious',
+    currentPage: 'home'
+}) %>
+
+<!-- Слайдер -->
+<section class="slider">
+    <div class="slide active" style="background-image: url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');">
+        <div class="slide-content">
+            <h2>Добро пожаловать в Delicious</h2>
+            <p>Лучшие блюда от наших шеф-поваров в уютной атмосфере</p>
+        </div>
+    </div>
+    
+    <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1559339352-11d035aa65de?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');">
+        <div class="slide-content">
+            <h2>Свежие ингредиенты</h2>
+            <p>Мы используем только свежие продукты от проверенных поставщиков</p>
+        </div>
+    </div>
+    
+    <div class="slide" style="background-image: url('https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');">
+        <div class="slide-content">
+            <h2>Особые предложения</h2>
+            <p>Каждый день новые скидки и специальные меню</p>
+        </div>
+    </div>
+    
+    <div class="slider-controls">
+        <button class="slider-btn prev"><i class="fas fa-chevron-left"></i></button>
+        <button class="slider-btn next"><i class="fas fa-chevron-right"></i></button>
+    </div>
+</section>
+
+<!-- О нас -->
+<section class="section">
+    <div class="container">
+        <h2 class="section-title">О нашем ресторане</h2>
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-utensils"></i>
+                </div>
+                <h3>Авторская кухня</h3>
+                <p>Уникальные блюда, созданные нашими шеф-поварами с любовью</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-wine-glass-alt"></i>
+                </div>
+                <h3>Винная карта</h3>
+                <p>Богатый выбор вин со всего мира для идеального сопровождения блюд</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <h3>Бронирование онлайн</h3>
+                <p>Легко забронируйте столик через наш сайт в любое время</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="fas fa-truck"></i>
+                </div>
+                <h3>Доставка</h3>
+                <p>Быстрая доставка ваших любимых блюд прямо к двери</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Популярные блюда -->
+<section class="section" style="background-color: #FFFFFF;">
+    <div class="container">
+        <h2 class="section-title">Популярные блюда</h2>
+        <div class="menu-grid">
+            <% if (menuItems && menuItems.length > 0) { %>
+                <% menuItems.forEach(item => { %>
+                    <div class="menu-item" data-category="<%= item.category.toLowerCase() %>">
+                        <img src="<%= item.image_url || 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80' %>" 
+                             alt="<%= item.name %>" class="menu-item-img">
+                        <div class="menu-item-content">
+                            <div class="menu-item-header">
+                                <h3 class="menu-item-name"><%= item.name %></h3>
+                                <span class="menu-item-price"><%= item.price %> ₽</span>
+                            </div>
+                            <span class="menu-item-category"><%= item.category %></span>
+                            <p class="menu-item-description"><%= item.description %></p>
+                            <% if (user) { %>
+                                <button class="btn btn-primary add-to-order" 
+                                        data-item-id="<%= item.id %>"
+                                        data-item-name="<%= item.name %>"
+                                        data-item-price="<%= item.price %>">
+                                    <i class="fas fa-cart-plus"></i> В заказ
+                                </button>
+                            <% } else { %>
+                                <a href="/login" class="btn btn-outline">
+                                    <i class="fas fa-sign-in-alt"></i> Войдите чтобы заказать
+                                </a>
+                            <% } %>
+                        </div>
+                    </div>
+                <% }); %>
+            <% } else { %>
+                <p class="text-center">Популярные блюда скоро появятся!</p>
+            <% } %>
+        </div>
+    </div>
+</section>
+
+<!-- Контакты -->
+<section class="section">
+    <div class="container">
+        <h2 class="section-title">Как нас найти</h2>
+        <div class="features">
+            <div class="feature-card">
+                <h3><i class="fas fa-clock"></i> Часы работы</h3>
+                <p>Понедельник - Пятница: 10:00 - 23:00</p>
+                <p>Суббота - Воскресенье: 11:00 - 00:00</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3><i class="fas fa-map-marker-alt"></i> Адрес</h3>
+                <p>г. Москва, ул. Примерная, д. 1</p>
+                <p>Метро: Примерная станция</p>
+            </div>
+            
+            <div class="feature-card">
+                <h3><i class="fas fa-phone"></i> Контакты</h3>
+                <p>Телефон: +7 (999) 123-45-67</p>
+                <p>Email: info@delicious.ru</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+    // Обработка кнопок добавления в заказ
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.add-to-order').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const itemId = this.dataset.itemId;
+                const itemName = this.dataset.itemName;
+                const itemPrice = parseFloat(this.dataset.itemPrice);
+                
+                // Показываем уведомление
+                showNotification(`"${itemName}" добавлено в заказ`, 'success');
+                
+                // Перенаправляем на страницу заказа
+                setTimeout(() => {
+                    window.location.href = `/order?add=${itemId}`;
+                }, 1000);
+            });
+        });
+    });
+    
+    function showNotification(message, type) {
+        // Создаем уведомление
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background-color: ${type === 'success' ? '#d4edda' : '#f8d7da'};
+            color: ${type === 'success' ? '#155724' : '#721c24'};
+            border: 1px solid ${type === 'success' ? '#c3e6cb' : '#f5c6cb'};
+            border-radius: 5px;
+            z-index: 10000;
+            animation: slideIn 0.3s ease-out;
+        `;
+        notification.textContent = message;
+        
+        document.body.appendChild(notification);
+        
+        // Удаляем уведомление через 3 секунды
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+</script>

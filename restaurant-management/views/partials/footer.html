@@ -1,0 +1,58 @@
+<footer class="footer">
+    <div class="footer-content">
+        <div class="footer-section">
+            <h3>О ресторане</h3>
+            <p>Delicious - это современный ресторан с авторской кухней, где каждый найдет блюдо по вкусу.</p>
+            <div class="social-links">
+                <a href="#" class="social-icon">
+                    <i class="fab fa-facebook-f"></i>
+                </a>
+                <a href="#" class="social-icon">
+                    <i class="fab fa-instagram"></i>
+                </a>
+                <a href="#" class="social-icon">
+                    <i class="fab fa-telegram"></i>
+                </a>
+                <a href="#" class="social-icon">
+                    <i class="fab fa-vk"></i>
+                </a>
+            </div>
+        </div>
+        
+        <div class="footer-section">
+            <h3>Быстрые ссылки</h3>
+            <ul class="footer-links">
+                <li><a href="/">Главная</a></li>
+                <li><a href="/menu">Меню</a></li>
+                <li><a href="/order">Заказ столика</a></li>
+                <li><a href="/profile">Личный кабинет</a></li>
+                <% if (isAdmin) { %>
+                    <li><a href="/admin">Админ панель</a></li>
+                <% } %>
+            </ul>
+        </div>
+        
+        <div class="footer-section">
+            <h3>Контактная информация</h3>
+            <ul class="footer-links">
+                <li><i class="fas fa-map-marker-alt"></i> г. Москва, ул. Примерная, д. 1</li>
+                <li><i class="fas fa-phone"></i> +7 (999) 123-45-67</li>
+                <li><i class="fas fa-envelope"></i> info@delicious.ru</li>
+                <li><i class="fas fa-clock"></i> Пн-Вс: 10:00 - 23:00</li>
+            </ul>
+        </div>
+        
+        <div class="footer-section">
+            <h3>Подписка на новости</h3>
+            <form class="subscribe-form">
+                <input type="email" placeholder="Ваш email" class="form-control">
+                <button type="submit" class="btn btn-primary mt-4">Подписаться</button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="footer-bottom">
+        <p>&copy; 2024 Ресторан Delicious. Все права защищены.</p>
+        <p><a href="#" style="color: #CCCCCC;">Политика конфиденциальности</a> | <a href="#" style="color: #CCCCCC;">Условия использования</a></p>
+    </div>
+</footer>

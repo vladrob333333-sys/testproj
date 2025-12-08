@@ -1,0 +1,173 @@
+<%- include('../layout', { 
+    title: 'Меню - Ресторан Delicious',
+    currentPage: 'menu'
+}) %>
+
+<section class="section">
+    <div class="container">
+        <h1 class="section-title">Наше меню</h1>
+        
+        <!-- Фильтры категорий -->
+        <div class="menu-categories">
+            <button class="category-btn active" data-category="all">Все</button>
+            <% if (categories && categories.length > 0) { %>
+                <% categories.forEach(category => { %>
+                    <button class="category-btn" data-category="<%= category.toLowerCase() %>">
+                        <%= category %>
+                    </button>
+                <% }); %>
+            <% } %>
+        </div>
+        
+        <!-- Список блюд -->
+        <div class="menu-grid">
+            <% if (menuItems && menuItems.length > 0) { %>
+                <% menuItems.forEach(item => { %>
+                    <div class="menu-item" data-category="<%= item.category.toLowerCase() %>">
+                        <img src="<%= item.image_url || 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80' %>" 
+                             alt="<%= item.name %>" class="menu-item-img">
+                        <div class="menu-item-content">
+                            <div class="menu-item-header">
+                                <h3 class="menu-item-name"><%= item.name %></h3>
+                                <span class="menu-item-price"><%= item.price %> ₽</span>
+                            </div>
+                            <span class="menu-item-category"><%= item.category %></span>
+                            <p class="menu-item-description"><%= item.description %></p>
+                            
+                            <% if (item.is_available) { %>
+                                <% if (user) { %>
+                                    <div class="menu-item-actions">
+                                        <div class="quantity-selector">
+                                            <button class="quantity-btn minus" data-item-id="<%= item.id %>">-</button>
+                                            <input type="number" 
+                                                   id="quantity-<%= item.id %>" 
+                                                   class="quantity-input" 
+                                                   data-item-id="<%= item.id %>"
+                                                   value="1" 
+                                                   min="1" 
+                                                   max="10"
+                                                   disabled>
+                                            <button class="quantity-btn plus" data-item-id="<%= item.id %>">+</button>
+                                        </div>
+                                        
+                                        <input type="checkbox" 
+                                               id="item-<%= item.id %>" 
+                                               class="menu-item-checkbox"
+                                               value="<%= item.id %>"
+                                               data-name="<%= item.name %>"
+                                               data-price="<%= item.price %>">
+                                        <label for="item-<%= item.id %>" class="btn btn-primary">
+                                            <i class="fas fa-cart-plus"></i> Выбрать
+                                        </label>
+                                    </div>
+                                <% } else { %>
+                                    <a href="/login" class="btn btn-outline">
+                                        <i class="fas fa-sign-in-alt"></i> Войдите чтобы заказать
+                                    </a>
+                                <% } %>
+                            <% } else { %>
+                                <button class="btn btn-secondary" disabled>
+                                    <i class="fas fa-times"></i> Нет в наличии
+                                </button>
+                            <% } %>
+                        </div>
+                    </div>
+                <% }); %>
+            <% } else { %>
+                <p class="text-center" style="grid-column: 1/-1;">Меню временно недоступно</p>
+            <% } %>
+        </div>
+        
+        <% if (isAdmin) { %>
+            <div class="text-center mt-4">
+                <a href="/admin?tab=menu" class="btn btn-secondary">
+                    <i class="fas fa-edit"></i> Управление меню
+                </a>
+            </div>
+        <% } %>
+    </div>
+</section>
+
+<style>
+    .menu-item-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 15px;
+    }
+    
+    .quantity-selector {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .quantity-btn {
+        width: 30px;
+        height: 30px;
+        border: 1px solid #C41E3A;
+        background-color: white;
+        color: #C41E3A;
+        border-radius: 5px;
+        cursor: pointer;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .quantity-btn:hover {
+        background-color: #C41E3A;
+        color: white;
+    }
+    
+    .quantity-input {
+        width: 50px;
+        height: 30px;
+        text-align: center;
+        border: 1px solid #E0E0E0;
+        border-radius: 5px;
+    }
+    
+    .menu-item-checkbox {
+        display: none;
+    }
+    
+    .menu-item-checkbox:checked + label {
+        background-color: #228B22;
+    }
+</style>
+
+<script>
+    // Обработка выбора количества
+    document.addEventListener('DOMContentLoaded', () => {
+        // Кнопки плюс/минус
+        document.querySelectorAll('.quantity-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const itemId = this.dataset.itemId;
+                const input = document.getElementById(`quantity-${itemId}`);
+                let value = parseInt(input.value) || 1;
+                
+                if (this.classList.contains('plus')) {
+                    value = Math.min(value + 1, 10);
+                } else if (this.classList.contains('minus')) {
+                    value = Math.max(value - 1, 1);
+                }
+                
+                input.value = value;
+            });
+        });
+        
+        // Обновление чекбокса при изменении количества
+        document.querySelectorAll('.quantity-input').forEach(input => {
+            input.addEventListener('change', function() {
+                const itemId = this.dataset.itemId;
+                const checkbox = document.querySelector(`#item-${itemId}`);
+                if (checkbox.checked) {
+                    // Обновляем информацию о количестве
+                    console.log(`Количество для товара ${itemId} изменено на ${this.value}`);
+                }
+            });
+        });
+    });
+</script>

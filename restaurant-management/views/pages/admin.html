@@ -1,0 +1,759 @@
+<%- include('../layout', { 
+    title: 'Админ панель - Ресторан Delicious',
+    currentPage: 'admin'
+}) %>
+
+<section class="section">
+    <div class="container">
+        <h1 class="section-title">
+            <i class="fas fa-cog"></i> Административная панель
+        </h1>
+        
+        <!-- Статистика -->
+        <div class="admin-grid">
+            <div class="admin-card">
+                <h3><i class="fas fa-chart-bar"></i> Общая статистика</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value"><%= orders ? orders.length : 0 %></div>
+                        <div class="stat-label">Всего заказов</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value"><%= users ? users.length : 0 %></div>
+                        <div class="stat-label">Пользователей</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value"><%= menuItems ? menuItems.length : 0 %></div>
+                        <div class="stat-label">Блюд в меню</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value"><%= bookings ? bookings.length : 0 %></div>
+                        <div class="stat-label">Бронирований</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="admin-card">
+                <h3><i class="fas fa-tachometer-alt"></i> Быстрые действия</h3>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMenuItemModal">
+                        <i class="fas fa-plus"></i> Добавить блюдо
+                    </button>
+                    <a href="#orders-tab" class="btn btn-secondary tab-button" data-tab="orders">
+                        <i class="fas fa-list"></i> Управление заказами
+                    </a>
+                    <a href="#users-tab" class="btn btn-outline tab-button" data-tab="users">
+                        <i class="fas fa-users"></i> Управление пользователями
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Табы -->
+        <div class="tabs mt-4">
+            <div class="tab-buttons">
+                <button class="tab-button active" data-tab="orders">
+                    <i class="fas fa-shopping-cart"></i> Заказы
+                </button>
+                <button class="tab-button" data-tab="bookings">
+                    <i class="fas fa-calendar-check"></i> Бронирования
+                </button>
+                <button class="tab-button" data-tab="menu">
+                    <i class="fas fa-utensils"></i> Меню
+                </button>
+                <button class="tab-button" data-tab="users">
+                    <i class="fas fa-user-friends"></i> Пользователи
+                </button>
+            </div>
+            
+            <!-- Таб заказов -->
+            <div class="tab-pane active" id="orders-tab">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Пользователь</th>
+                                <th>Дата</th>
+                                <th>Сумма</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (orders && orders.length > 0) { %>
+                                <% orders.forEach(order => { %>
+                                    <tr>
+                                        <td>#<%= order.id %></td>
+                                        <td>
+                                            <%= order.user_name || 'Пользователь' %>
+                                            <br>
+                                            <small><%= order.user_email %></small>
+                                        </td>
+                                        <td>
+                                            <%= moment(order.created_at).format('DD.MM.YYYY HH:mm') %>
+                                            <% if (order.booking_date) { %>
+                                                <br>
+                                                <small>На <%= moment(order.booking_date).format('DD.MM.YYYY HH:mm') %></small>
+                                            <% } %>
+                                        </td>
+                                        <td><%= order.total_amount %> ₽</td>
+                                        <td>
+                                            <span class="status-badge status-<%= order.status %>">
+                                                <%= order.status === 'pending' ? 'В обработке' : 
+                                                   order.status === 'confirmed' ? 'Подтвержден' : 
+                                                   order.status === 'completed' ? 'Завершен' : 
+                                                   order.status === 'cancelled' ? 'Отменен' : order.status %>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button class="btn btn-sm btn-outline view-order" data-id="<%= order.id %>">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <div class="dropdown">
+                                                    <button class="btn btn-sm btn-outline dropdown-toggle" 
+                                                            type="button" 
+                                                            data-bs-toggle="dropdown">
+                                                        Статус
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li><a class="dropdown-item update-status" 
+                                                               data-id="<%= order.id %>" 
+                                                               data-status="pending">В обработке</a></li>
+                                                        <li><a class="dropdown-item update-status" 
+                                                               data-id="<%= order.id %>" 
+                                                               data-status="confirmed">Подтвердить</a></li>
+                                                        <li><a class="dropdown-item update-status" 
+                                                               data-id="<%= order.id %>" 
+                                                               data-status="completed">Завершить</a></li>
+                                                        <li><a class="dropdown-item update-status" 
+                                                               data-id="<%= order.id %>" 
+                                                               data-status="cancelled">Отменить</a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="6" class="text-center">Нет заказов</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Таб бронирований -->
+            <div class="tab-pane" id="bookings-tab">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Пользователь</th>
+                                <th>Дата</th>
+                                <th>Гостей</th>
+                                <th>Статус</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (bookings && bookings.length > 0) { %>
+                                <% bookings.forEach(booking => { %>
+                                    <tr>
+                                        <td>#<%= booking.id %></td>
+                                        <td>
+                                            <%= booking.user_name || 'Пользователь' %>
+                                            <br>
+                                            <small><%= booking.user_email %></small>
+                                        </td>
+                                        <td><%= moment(booking.booking_date).format('DD.MM.YYYY HH:mm') %></td>
+                                        <td><%= booking.persons %></td>
+                                        <td>
+                                            <span class="status-badge status-<%= booking.status %>">
+                                                <%= booking.status === 'confirmed' ? 'Подтверждено' : 
+                                                   booking.status === 'pending' ? 'Ожидание' : 
+                                                   booking.status === 'cancelled' ? 'Отменено' : booking.status %>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button class="btn btn-sm btn-outline edit-booking" data-id="<%= booking.id %>">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline delete-booking" data-id="<%= booking.id %>">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="6" class="text-center">Нет бронирований</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Таб меню -->
+            <div class="tab-pane" id="menu-tab">
+                <div class="text-end mb-3">
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMenuItemModal">
+                        <i class="fas fa-plus"></i> Добавить блюдо
+                    </button>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Название</th>
+                                <th>Категория</th>
+                                <th>Цена</th>
+                                <th>Доступно</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (menuItems && menuItems.length > 0) { %>
+                                <% menuItems.forEach(item => { %>
+                                    <tr>
+                                        <td>#<%= item.id %></td>
+                                        <td>
+                                            <strong><%= item.name %></strong>
+                                            <% if (item.description) { %>
+                                                <br>
+                                                <small class="text-muted"><%= item.description %></small>
+                                            <% } %>
+                                        </td>
+                                        <td><%= item.category %></td>
+                                        <td><%= item.price %> ₽</td>
+                                        <td>
+                                            <% if (item.is_available) { %>
+                                                <span class="badge bg-success">Да</span>
+                                            <% } else { %>
+                                                <span class="badge bg-danger">Нет</span>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button class="btn btn-sm btn-outline edit-menu-item" 
+                                                        data-id="<%= item.id %>">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline delete-menu-item" 
+                                                        data-id="<%= item.id %>">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="6" class="text-center">Нет блюд в меню</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Таб пользователей -->
+            <div class="tab-pane" id="users-tab">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Имя</th>
+                                <th>Email</th>
+                                <th>Телефон</th>
+                                <th>Роль</th>
+                                <th>Регистрация</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (users && users.length > 0) { %>
+                                <% users.forEach(user => { %>
+                                    <tr>
+                                        <td>#<%= user.id %></td>
+                                        <td><%= user.name %></td>
+                                        <td><%= user.email %></td>
+                                        <td><%= user.phone %></td>
+                                        <td>
+                                            <% if (user.is_admin) { %>
+                                                <span class="badge bg-danger">Админ</span>
+                                            <% } else { %>
+                                                <span class="badge bg-secondary">Пользователь</span>
+                                            <% } %>
+                                        </td>
+                                        <td><%= moment(user.created_at).format('DD.MM.YYYY') %></td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button class="btn btn-sm btn-outline edit-user" data-id="<%= user.id %>">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <% if (!user.is_admin) { %>
+                                                    <button class="btn btn-sm btn-outline make-admin" data-id="<%= user.id %>">
+                                                        <i class="fas fa-crown"></i>
+                                                    </button>
+                                                <% } %>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="7" class="text-center">Нет пользователей</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Модальное окно добавления блюда -->
+<div class="modal fade" id="addMenuItemModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Добавить блюдо в меню</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="addMenuItemForm">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="itemName" class="form-label">Название блюда</label>
+                        <input type="text" id="itemName" name="name" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="itemDescription" class="form-label">Описание</label>
+                        <textarea id="itemDescription" name="description" class="form-control" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="itemPrice" class="form-label">Цена (₽)</label>
+                        <input type="number" id="itemPrice" name="price" class="form-control" step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="itemCategory" class="form-label">Категория</label>
+                        <select id="itemCategory" name="category" class="form-control" required>
+                            <option value="Основные блюда">Основные блюда</option>
+                            <option value="Салаты">Салаты</option>
+                            <option value="Супы">Супы</option>
+                            <option value="Закуски">Закуски</option>
+                            <option value="Десерты">Десерты</option>
+                            <option value="Напитки">Напитки</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="form-check">
+                            <input type="checkbox" id="itemAvailable" name="is_available" class="form-check-input" checked>
+                            <label for="itemAvailable" class="form-check-label">Доступно для заказа</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Добавить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно просмотра заказа -->
+<div class="modal fade" id="viewOrderModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Детали заказа #<span id="orderId"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="orderDetails">
+                <!-- Детали заказа будут загружены через AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .tabs {
+        background-color: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    }
+    
+    .tab-buttons {
+        display: flex;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        overflow-x: auto;
+    }
+    
+    .tab-button {
+        padding: 15px 30px;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        font-weight: 600;
+        color: #666;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.3s;
+    }
+    
+    .tab-button:hover {
+        background-color: #e9ecef;
+        color: #333;
+    }
+    
+    .tab-button.active {
+        color: #C41E3A;
+        border-bottom-color: #C41E3A;
+        background-color: white;
+    }
+    
+    .tab-pane {
+        display: none;
+        padding: 30px;
+    }
+    
+    .tab-pane.active {
+        display: block;
+        animation: fadeIn 0.3s;
+    }
+    
+    .status-badge {
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .badge {
+        padding: 5px 10px;
+        border-radius: 10px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .bg-success {
+        background-color: #d4edda !important;
+        color: #155724 !important;
+    }
+    
+    .bg-danger {
+        background-color: #f8d7da !important;
+        color: #721c24 !important;
+    }
+    
+    .bg-secondary {
+        background-color: #e9ecef !important;
+        color: #495057 !important;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 5px;
+    }
+    
+    .btn-sm {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+    
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1050;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        outline: 0;
+        background-color: rgba(0,0,0,0.5);
+    }
+    
+    .modal.show {
+        display: block;
+    }
+    
+    .modal-dialog {
+        position: relative;
+        width: auto;
+        margin: 1.75rem auto;
+        max-width: 500px;
+    }
+    
+    .modal-content {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        pointer-events: auto;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid rgba(0,0,0,.2);
+        border-radius: 10px;
+        outline: 0;
+    }
+    
+    .modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .modal-body {
+        position: relative;
+        flex: 1 1 auto;
+        padding: 1rem;
+    }
+    
+    .modal-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        padding: 1rem;
+        border-top: 1px solid #dee2e6;
+    }
+    
+    .btn-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #666;
+    }
+</style>
+
+<!-- Bootstrap JavaScript (упрощенная версия для модальных окон) -->
+<script>
+    // Простая реализация модальных окон
+    class Modal {
+        constructor(element) {
+            this.element = element;
+            this.init();
+        }
+        
+        init() {
+            const closeButtons = this.element.querySelectorAll('[data-bs-dismiss="modal"], .btn-close');
+            closeButtons.forEach(btn => {
+                btn.addEventListener('click', () => this.hide());
+            });
+            
+            // Закрытие при клике вне модального окна
+            this.element.addEventListener('click', (e) => {
+                if (e.target === this.element) {
+                    this.hide();
+                }
+            });
+        }
+        
+        show() {
+            this.element.style.display = 'block';
+            setTimeout(() => {
+                this.element.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }, 10);
+        }
+        
+        hide() {
+            this.element.classList.remove('show');
+            setTimeout(() => {
+                this.element.style.display = 'none';
+                document.body.style.overflow = '';
+            }, 300);
+        }
+    }
+    
+    // Инициализация всех модальных окон
+    document.addEventListener('DOMContentLoaded', () => {
+        const modals = document.querySelectorAll('.modal');
+        modals.forEach(modal => new Modal(modal));
+        
+        // Обработчики для кнопок открытия модальных окон
+        document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
+            button.addEventListener('click', () => {
+                const target = button.dataset.bsTarget;
+                const modal = document.querySelector(target);
+                if (modal) {
+                    new Modal(modal).show();
+                }
+            });
+        });
+        
+        // Обработка табов
+        initTabs();
+        
+        // Обработка форм
+        initForms();
+        
+        // Обработка действий администратора
+        initAdminActions();
+    });
+    
+    function initTabs() {
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabPanes = document.querySelectorAll('.tab-pane');
+        
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabId = button.dataset.tab;
+                
+                // Обновляем активные кнопки
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // Показываем активную панель
+                tabPanes.forEach(pane => {
+                    if (pane.id === `${tabId}-tab`) {
+                        pane.classList.add('active');
+                    } else {
+                        pane.classList.remove('active');
+                    }
+                });
+                
+                // Сохраняем активный таб в URL
+                window.history.replaceState({}, '', `#${tabId}-tab`);
+            });
+        });
+        
+        // Восстановление активного таба из URL
+        const hash = window.location.hash;
+        if (hash) {
+            const tabButton = document.querySelector(`.tab-button[data-tab="${hash.replace('-tab', '')}"]`);
+            if (tabButton) {
+                tabButton.click();
+            }
+        }
+    }
+    
+    function initForms() {
+        // Форма добавления блюда
+        const addMenuItemForm = document.getElementById('addMenuItemForm');
+        if (addMenuItemForm) {
+            addMenuItemForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const formData = new FormData(addMenuItemForm);
+                const data = Object.fromEntries(formData.entries());
+                data.is_available = data.is_available === 'on';
+                
+                try {
+                    const response = await fetch('/admin/menu/add', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        alert('Блюдо успешно добавлено!');
+                        window.location.reload();
+                    } else {
+                        alert('Ошибка: ' + (result.message || 'Неизвестная ошибка'));
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Ошибка при добавлении блюда');
+                }
+            });
+        }
+    }
+    
+    function initAdminActions() {
+        // Обновление статуса заказа
+        document.querySelectorAll('.update-status').forEach(button => {
+            button.addEventListener('click', async function() {
+                const orderId = this.dataset.id;
+                const status = this.dataset.status;
+                
+                if (!confirm(`Изменить статус заказа #${orderId} на "${status}"?`)) {
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/admin/order/${orderId}/status`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ status })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        alert('Статус успешно обновлен!');
+                        window.location.reload();
+                    } else {
+                        alert('Ошибка: ' + (result.message || 'Неизвестная ошибка'));
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Ошибка при обновлении статуса');
+                }
+            });
+        });
+        
+        // Просмотр деталей заказа
+        document.querySelectorAll('.view-order').forEach(button => {
+            button.addEventListener('click', async function() {
+                const orderId = this.dataset.id;
+                
+                try {
+                    // Здесь можно загрузить детали заказа через AJAX
+                    // и отобразить их в модальном окне
+                    const modal = document.getElementById('viewOrderModal');
+                    document.getElementById('orderId').textContent = orderId;
+                    
+                    // Загрузка деталей заказа
+                    const response = await fetch(`/api/orders/${orderId}`);
+                    const order = await response.json();
+                    
+                    // Отображение деталей
+                    const detailsDiv = document.getElementById('orderDetails');
+                    detailsDiv.innerHTML = `
+                        <div class="order-detail">
+                            <h6>Информация о заказе:</h6>
+                            <p><strong>Пользователь:</strong> ${order.user_name} (${order.user_email})</p>
+                            <p><strong>Дата создания:</strong> ${new Date(order.created_at).toLocaleString('ru-RU')}</p>
+                            <p><strong>Статус:</strong> ${order.status}</p>
+                            <p><strong>Сумма:</strong> ${order.total_amount} ₽</p>
+                            ${order.special_requests ? `<p><strong>Особые пожелания:</strong> ${order.special_requests}</p>` : ''}
+                        </div>
+                    `;
+                    
+                    new Modal(modal).show();
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Ошибка при загрузке деталей заказа');
+                }
+            });
+        });
+    }
+</script>

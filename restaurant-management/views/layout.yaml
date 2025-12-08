@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title || 'Ресторан Delicious' %></title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Ресторан Delicious - лучшая кухня и обслуживание. Бронирование столиков онлайн.">
+    <meta name="keywords" content="ресторан, еда, бронирование, доставка, меню">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/images/favicon.ico">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="/css/style.css">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Additional Styles -->
+    <style>
+        /* Дополнительные стили для анимаций */
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <%- include('partials/header') %>
+    
+    <!-- Основной контент -->
+    <main class="container">
+        <%- body %>
+    </main>
+    
+    <!-- Футер -->
+    <%- include('partials/footer') %>
+    
+    <!-- JavaScript -->
+    <script src="/js/script.js"></script>
+    
+    <!-- Additional Scripts -->
+    <script>
+        // Глобальные переменные
+        window.appConfig = {
+            userId: '<%= user && user.id %>',
+            isAdmin: <%= isAdmin || false %>,
+            currentPage: '<%= currentPage || "" %>'
+        };
+    </script>
+</body>
+</html>
